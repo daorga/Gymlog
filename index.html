@@ -251,7 +251,12 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
 </div>
 
 <script>
-const CIRC=502.7,REST_DAYS=2;
+const CIRC=502.7;
+const MUSCLE_REST={
+  pecho:2,hombros:2,biceps:2,triceps:2,antebrazo:2,
+  espalda:2,gluteos:2,cuad:2,isquio:2,
+  abdomen:1,pantorrilla:1
+};
 const MUSCLES={
   pecho:{name:'Pecho',front:['mf-pecho'],back:[]},
   hombros:{name:'Hombros',front:['mf-hombros'],back:['mb-hombros']},
@@ -291,8 +296,8 @@ document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('e
 
 function daysSince(d){const a=new Date(d),b=new Date();return Math.floor((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5);}
 function getLastDays(){const L={};store.sessions.forEach(s=>{const d=daysSince(s.date);s.muscles.forEach(m=>{if(L[m]===undefined||d<L[m])L[m]=d;});});return L;}
-function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<REST_DAYS;}
-function daysLeft(id){const L=getLastDays();return Math.max(0,REST_DAYS-(L[id]??REST_DAYS));}
+function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<(MUSCLE_REST[id]||2);}
+function daysLeft(id){const L=getLastDays();const r=MUSCLE_REST[id]||2;return Math.max(0,r-(L[id]??r));}
 function readyDate(id){const d=new Date();d.setDate(d.getDate()+daysLeft(id));return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});}
 
 function toggleMuscle(id){
