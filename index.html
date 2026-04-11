@@ -491,6 +491,21 @@ function renderApiKeyStatus(){
   }
 }
 
+function styleAI(html){
+  // wrap each <section> nicely
+  return html
+    .replace(/<section>/g,'<div style="margin-bottom:14px;padding:14px;background:var(--bg2);border-radius:var(--r-md);border-left:3px solid var(--fg)">')
+    .replace(/<\/section>/g,'</div>')
+    .replace(/<h4>/g,'<div style="font-size:11px;font-weight:500;color:var(--fg3);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">')
+    .replace(/<\/h4>/g,'</div>')
+    .replace(/<p>/g,'<p style="font-size:13px;color:var(--fg2);line-height:1.65;margin:0">')
+    .replace(/<ul>/g,'<ul style="list-style:none;padding:0;margin:0">')
+    .replace(/<ol>/g,'<ol style="padding-left:16px;margin:0">')
+    .replace(/<li>/g,'<li style="font-size:13px;color:var(--fg2);line-height:1.65;padding:4px 0;border-bottom:1px solid var(--bdr)">')
+    .replace(/<\/li>/g,'</li>')
+    .replace(/<strong>/g,'<strong style="color:var(--fg)">');
+}
+
 function formatAI(md){
   const sections=[];
   let current=null;
@@ -541,19 +556,31 @@ async function analyzeWeek(){
     return `${fecha}\nMúsculos: ${musculos}\n${ejercicios}`;
   }).join('\n\n');
 
-  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento de la semana y da recomendaciones concretas y motivadoras para la próxima semana.
+  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento y responde ÚNICAMENTE con HTML usando exactamente esta estructura, sin texto fuera del HTML, sin markdown, sin explicaciones adicionales:
 
-REGISTRO DE ENTRENAMIENTO:
-${resumen}
+<section>
+<h4>Resumen de la semana</h4>
+<p>2-3 oraciones sobre lo que hizo bien.</p>
+</section>
+<section>
+<h4>Músculos que necesitan atención</h4>
+<ul><li>músculo: razón</li><li>músculo: razón</li></ul>
+</section>
+<section>
+<h4>Sube de peso</h4>
+<ul><li>Ejercicio: de Xlb a Ylb</li></ul>
+</section>
+<section>
+<h4>Cambia o agrega</h4>
+<ul><li>acción concreta</li></ul>
+</section>
+<section>
+<h4>Plan próxima semana</h4>
+<ol><li>ejercicio</li></ol>
+</section>
 
-Por favor responde en español y estructura tu respuesta así:
-1. Resumen de la semana (qué hiciste bien)
-2. Músculos que necesitan más atención
-3. Recomendaciones de peso (qué ejercicios subir y cuánto)
-4. Variaciones sugeridas (ejercicios a cambiar o agregar)
-5. Plan sugerido para la próxima semana
-
-Sé específico con los números y conciso. Máximo 400 palabras.`;
+REGISTRO:
+\${resumen}`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -564,7 +591,7 @@ Sé específico con los números y conciso. Máximo 400 palabras.`;
     const data=await resp.json();
     if(data.error){throw new Error(data.error.message);}
     const text=data.content.map(c=>c.text||'').join('');
-    result.innerHTML=formatAI(text);
+    result.innerHTML=styleAI(text);
     result.style.display='';
   } catch(e){
     result.innerHTML='<div style="font-size:13px;color:var(--red);padding:10px 0">Error: '+e.message+'. Verifica tu API key en Ajustes.</div>';
