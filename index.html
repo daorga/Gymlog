@@ -244,7 +244,7 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
       <div id="analyze-wrap">
         <button id="analyze-btn" class="btn btn-dark" style="width:100%;display:none" onclick="analyzeWeek()">Analizar semana con IA</button>
       </div>
-      <div id="ai-result" style="margin-top:14px;font-size:13px;color:var(--fg);line-height:1.75;display:none"></div>
+      <div id="ai-result" style="margin-top:14px;display:none"></div>
     </div>
   </div>
 
@@ -491,6 +491,34 @@ function renderApiKeyStatus(){
   }
 }
 
+function formatAI(md){
+  const sections=[];
+  let current=null;
+  md.split('\n').forEach(line=>{
+    const h3=line.match(/^###?\s*\d*\.?\s*(.+)/);
+    const bullet=line.match(/^[-*]\s+(.+)/);
+    const bold=line.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    if(h3){
+      if(current)sections.push(current);
+      current={title:h3[1].replace(/\*\*(.*?)\*\*/g,'$1').replace(/[🎯📈🔄✅📅💪🚀]/gu,'').trim(),items:[]};
+    } else if(bullet&&current){
+      current.items.push(bold.replace(/^[-*]\s+/,''));
+    } else if(line.trim()&&current&&!h3&&!bullet){
+      current.items.push('<span style="color:var(--fg2)">'+bold+'</span>');
+    }
+  });
+  if(current)sections.push(current);
+  if(!sections.length){
+    return '<div style="font-size:13px;line-height:1.75;color:var(--fg)">'+md.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')+'</div>';
+  }
+  return sections.map((s,i)=>`
+    <div style="margin-bottom:16px;padding:14px;background:var(--bg2);border-radius:var(--r-md);border-left:3px solid var(--fg)">
+      <div style="font-size:10px;font-weight:500;color:var(--fg3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">${String(i+1).padStart(2,'0')}</div>
+      <div style="font-size:14px;font-weight:500;color:var(--fg);margin-bottom:8px;letter-spacing:-0.2px">${s.title}</div>
+      ${s.items.length?'<ul style="list-style:none;padding:0;margin:0">'+s.items.map(it=>`<li style="font-size:12px;color:var(--fg2);line-height:1.65;padding:4px 0;border-bottom:1px solid var(--bdr);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--fg);margin-top:5px;flex-shrink:0;width:4px;height:4px;border-radius:50%;background:var(--fg);display:inline-block"></span><span>${it}</span></li>`).join('')+'</ul>':''}
+    </div>`).join('');
+}
+
 async function analyzeWeek(){
   const key=store.apiKey;
   if(!key){showTab('settings');return;}
@@ -536,11 +564,10 @@ Sé específico con los números y conciso. Máximo 400 palabras.`;
     const data=await resp.json();
     if(data.error){throw new Error(data.error.message);}
     const text=data.content.map(c=>c.text||'').join('');
-    result.textContent=text;
+    result.innerHTML=formatAI(text);
     result.style.display='';
   } catch(e){
-    result.textContent='Error: '+e.message+'. Verifica tu API key en Ajustes.';
-    result.style.color='var(--red)';
+    result.innerHTML='<div style="font-size:13px;color:var(--red);padding:10px 0">Error: '+e.message+'. Verifica tu API key en Ajustes.</div>';
     result.style.display='';
   }
   btn.textContent='Analizar semana con IA';
