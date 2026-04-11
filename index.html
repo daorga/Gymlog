@@ -118,6 +118,7 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
     <button class="tab" onclick="showTab('timer')">timer</button>
     <button class="tab" onclick="showTab('stats')">semana</button>
     <button class="tab" onclick="showTab('history')">historial</button>
+    <button class="tab" onclick="showTab('settings')">ajustes</button>
   </div>
 
   <!-- ENTRENAR -->
@@ -186,7 +187,7 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
     <div id="step3" style="display:none">
       <div id="exercises-logging"></div>
       <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="btn" onclick="goStep2()">Atrás</button>
+        <button class="btn" onclick="goStep2()">+ ejercicios</button>
         <button class="btn btn-dark" style="flex:1" onclick="saveSession()">Guardar sesión</button>
       </div>
     </div>
@@ -248,6 +249,19 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
       <div id="history-list"><div class="empty">Aún no hay sesiones.<br>Empieza tu primer entrenamiento.</div></div>
     </div>
   </div>
+
+  <div id="tab-settings" style="display:none">
+    <div class="card">
+      <div style="font-size:11px;color:var(--fg3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px">API Key de Anthropic</div>
+      <div style="font-size:13px;color:var(--fg2);margin-bottom:12px;line-height:1.6">Necesaria para el análisis con IA. Se guarda solo en tu celular y nunca se comparte. Obtenla en <span style="color:var(--fg);font-weight:500">console.anthropic.com</span></div>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="margin-bottom:10px;font-family:var(--fm);font-size:13px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-dark" style="flex:1" onclick="saveApiKey()">Guardar</button>
+        <button class="btn" onclick="clearApiKey()" style="color:var(--red)">Borrar</button>
+      </div>
+      <div id="api-key-status" style="font-size:12px;margin-top:10px;color:var(--fg3)"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -290,7 +304,7 @@ let store=loadStore();
 if(!store.sessions)store.sessions=[];
 if(!store.customEx)store.customEx={};
 let selM=new Set(),selEx=new Set(),exSets={};
-let timerTotal=60,timerRem=60,timerOn=false,timerIv=null;
+let timerTotal=60,timerRem=60,timerOn=false,timerIv=null,timerEnd=null;
 
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 
@@ -405,6 +419,19 @@ function renderLogging(){
 }
 
 function updSet(ex,si,f,v){if(!exSets[ex])exSets[ex]=[{w:'',r:''}];exSets[ex][si][f]=v;}
+function removeSet(ex,si){if(!exSets[ex]||exSets[ex].length<=1)return;exSets[ex].splice(si,1);renderLogging();}
+function removeEx(ex){selEx.delete(ex);delete exSets[ex];if(!selEx.size){goStep2();return;}renderLogging();}
+function removeSet(ex,si){
+  if(!exSets[ex]||exSets[ex].length<=1)return;
+  exSets[ex].splice(si,1);
+  renderLogging();
+}
+function removeEx(ex){
+  selEx.delete(ex);
+  delete exSets[ex];
+  if(!selEx.size){goStep2();return;}
+  renderLogging();
+}
 function addSetTo(ex){
   if(!exSets[ex])exSets[ex]=[{w:'',r:''}];
   const last=exSets[ex][exSets[ex].length-1];
@@ -414,16 +441,104 @@ function addSetTo(ex){
 
 function saveSession(){
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
+  if(!confirm('¿Ya terminaste la sesión? Se guardará el entrenamiento de hoy.'))return;
   store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:[...selEx].map(ex=>({name:ex,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}))});
   saveStore();selM=new Set();selEx=new Set();exSets={};
   updateColors();renderPills();goStep1();showTab('stats');
 }
 
 function showTab(name){
-  ['train','timer','stats','history'].forEach(t=>document.getElementById('tab-'+t).style.display=t===name?'':'none');
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['train','timer','stats','history'][i]===name));
+  ['train','timer','stats','history','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===name?'':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['train','timer','stats','history','settings'][i]===name));
   if(name==='stats')renderStats();
   if(name==='history')renderHistory();
+  if(name==='settings')renderApiKeyStatus();
+}
+
+function saveApiKey(){
+  const k=document.getElementById('api-key-input').value.trim();
+  if(!k){alert('Escribe tu API key primero');return;}
+  store.apiKey=k;
+  saveStore();
+  document.getElementById('api-key-input').value='';
+  renderApiKeyStatus();
+}
+
+function clearApiKey(){
+  if(!confirm('¿Borrar la API key guardada?'))return;
+  delete store.apiKey;
+  saveStore();
+  renderApiKeyStatus();
+}
+
+function renderApiKeyStatus(){
+  const el=document.getElementById('api-key-status');
+  if(!el)return;
+  const inp=document.getElementById('api-key-input');
+  if(store.apiKey){
+    el.textContent='API key guardada: sk-ant-...'+store.apiKey.slice(-6);
+    el.style.color='var(--green)';
+    if(inp)inp.placeholder='Escribe para reemplazar...';
+  } else {
+    el.textContent='Sin API key guardada';
+    el.style.color='var(--fg3)';
+  }
+}
+
+async function analyzeWeek(){
+  const key=store.apiKey;
+  if(!key){showTab('settings');return;}
+  const week=getWeekSessions();
+  if(!week.length){alert('No hay sesiones esta semana para analizar');return;}
+
+  const btn=document.getElementById('analyze-btn');
+  const result=document.getElementById('ai-result');
+  btn.textContent='Analizando...';
+  btn.disabled=true;
+  result.style.display='none';
+
+  const resumen=week.map(s=>{
+    const fecha=new Date(s.date).toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});
+    const musculos=s.muscles.map(m=>MUSCLES[m]?.name||m).join(', ');
+    const ejercicios=s.exercises.map(ex=>{
+      const series=ex.sets.map((st,i)=>`Serie ${i+1}: ${st.w||0}lb x ${st.r||0} reps`).join(', ');
+      return `  - ${ex.name}: ${series}`;
+    }).join('\n');
+    return `${fecha}\nMúsculos: ${musculos}\n${ejercicios}`;
+  }).join('\n\n');
+
+  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento de la semana y da recomendaciones concretas y motivadoras para la próxima semana.
+
+REGISTRO DE ENTRENAMIENTO:
+${resumen}
+
+Por favor responde en español y estructura tu respuesta así:
+1. Resumen de la semana (qué hiciste bien)
+2. Músculos que necesitan más atención
+3. Recomendaciones de peso (qué ejercicios subir y cuánto)
+4. Variaciones sugeridas (ejercicios a cambiar o agregar)
+5. Plan sugerido para la próxima semana
+
+Sé específico con los números y conciso. Máximo 400 palabras.`;
+
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    if(data.error){throw new Error(data.error.message);}
+    const text=data.content.map(c=>c.text||'').join('');
+    result.textContent=text;
+    result.style.display='';
+  } catch(e){
+    result.textContent='Error: '+e.message+'. Verifica tu API key en Ajustes.';
+    result.style.color='var(--red)';
+    result.style.display='';
+  }
+  btn.textContent='Analizar semana con IA';
+  btn.disabled=false;
 }
 
 function fmtT(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
@@ -436,12 +551,33 @@ function updateTimerDisplay(){
 }
 function setTimer(s){clearInterval(timerIv);timerOn=false;timerTotal=s;timerRem=s;document.getElementById('timer-toggle-btn').textContent='Iniciar';document.getElementById('timer-state-label').textContent='Descanso entre series';updateTimerDisplay();}
 function setCustomTimer(){const m=parseInt(document.getElementById('custom-min').value)||0,s=parseInt(document.getElementById('custom-sec').value)||0;setTimer(m*60+s);}
-function toggleTimer(){if(timerOn){clearInterval(timerIv);timerOn=false;document.getElementById('timer-toggle-btn').textContent='Continuar';document.getElementById('timer-state-label').textContent='Pausado';}else startTimer();}
+function toggleTimer(){
+  if(timerOn){
+    clearInterval(timerIv);timerOn=false;
+    timerRem=Math.max(0,Math.round((timerEnd-Date.now())/1000));
+    document.getElementById('timer-toggle-btn').textContent='Continuar';
+    document.getElementById('timer-state-label').textContent='Pausado';
+  }else startTimer();
+}
 function startTimer(){
   if(timerRem<=0)timerRem=timerTotal;
-  timerOn=true;document.getElementById('timer-toggle-btn').textContent='Pausar';document.getElementById('timer-state-label').textContent='Descansando...';
+  timerOn=true;
+  timerEnd=Date.now()+timerRem*1000;
+  document.getElementById('timer-toggle-btn').textContent='Pausar';
+  document.getElementById('timer-state-label').textContent='Descansando...';
   clearInterval(timerIv);
-  timerIv=setInterval(()=>{if(timerRem<=0){clearInterval(timerIv);timerOn=false;document.getElementById('timer-toggle-btn').textContent='Iniciar';document.getElementById('timer-state-label').textContent='¡Listo — vuelve al ejercicio!';try{navigator.vibrate([400,100,400,100,600])}catch(e){}return;}timerRem--;updateTimerDisplay();},1000);
+  timerIv=setInterval(()=>{
+    timerRem=Math.max(0,Math.round((timerEnd-Date.now())/1000));
+    updateTimerDisplay();
+    if(timerRem<=0){
+      clearInterval(timerIv);timerOn=false;
+      document.getElementById('timer-toggle-btn').textContent='Iniciar';
+      document.getElementById('timer-state-label').textContent='¡Listo — vuelve al ejercicio!';
+      try{navigator.vibrate([400,100,400,100,600])}catch(e){}
+      showTab('train');
+      return;
+    }
+  },500);
 }
 function resetTimer(){clearInterval(timerIv);timerOn=false;timerRem=timerTotal;document.getElementById('timer-toggle-btn').textContent='Iniciar';document.getElementById('timer-state-label').textContent='Descanso entre series';updateTimerDisplay();}
 
@@ -454,10 +590,11 @@ function renderStats(){
   const trained=allM.filter(m=>cnt[m]>0),missing=allM.filter(m=>cnt[m]===0);
   const totalSets=week.reduce((a,s)=>a+s.exercises.reduce((b,e)=>b+e.sets.length,0),0);
   const totalVol=week.reduce((a,s)=>a+s.exercises.reduce((b,e)=>b+e.sets.reduce((c,st)=>c+(parseFloat(st.w)||0)*(parseFloat(st.r)||0),0),0),0);
+  const totalEx=week.reduce((a,s)=>a+s.exercises.length,0);
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat-cell"><div class="stat-n">${week.length}</div><div class="stat-l">sesiones</div></div>
-    <div class="stat-cell"><div class="stat-n">${totalSets}</div><div class="stat-l">series</div></div>
-    <div class="stat-cell"><div class="stat-n">${Math.round(totalVol).toLocaleString()}</div><div class="stat-l">lb vol</div></div>`;
+    <div class="stat-cell"><div class="stat-n">${totalEx}</div><div class="stat-l">ejercicios</div></div>
+    <div class="stat-cell"><div class="stat-n">${totalSets}</div><div class="stat-l">series</div></div>`;
   const days=['do','lu','ma','mi','ju','vi','sá'];
   const dc=Array(7).fill(0);
   const today=new Date().getDay();
@@ -480,6 +617,16 @@ function renderStats(){
   document.getElementById('missing-chips').innerHTML=missing.length
     ?missing.map(m=>`<span class="chip chip-neutral">${MUSCLES[m].name}</span>`).join('')
     :'<span class="chip chip-green">Entrenaste todos los grupos</span>';
+
+  const apiKey=store.apiKey||'';
+  const analyzeBtn=document.getElementById('analyze-btn');
+  const analyzeWrap=document.getElementById('analyze-wrap');
+  if(analyzeBtn){
+    analyzeBtn.style.display=apiKey?'':'none';
+    if(!apiKey && analyzeWrap){
+      analyzeWrap.innerHTML='<div style="font-size:12px;color:var(--fg3);text-align:center;padding:8px 0">Agrega tu API key en Ajustes para análisis con IA</div>';
+    }
+  }
 }
 
 function renderHistory(){
