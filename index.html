@@ -390,13 +390,13 @@ function renderLogging(){
       </div>
       <div style="display:flex;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">
         <div style="min-width:22px;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">N</div>
-        <div style="flex:1;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">Peso kg</div>
+        <div style="flex:1;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">Peso lb</div>
         <div style="flex:1;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">Reps</div>
         <div style="min-width:52px"></div>
       </div>
       ${sets.map((s,si)=>`<div class="set-row">
         <span style="min-width:22px;font-size:12px;color:var(--fg3);font-family:var(--fm)">${si+1}</span>
-        <div style="flex:1"><input type="number" placeholder="—" value="${s.w}" min="0" step=".5" oninput="updSet('${ex.replace(/'/g,"\\'")}',${si},'w',this.value)"></div>
+        <div style="flex:1"><input type="number" placeholder="—" value="${s.w}" min="0" step="1" oninput="updSet('${ex.replace(/'/g,"\\'")}',${si},'w',this.value)"></div>
         <div style="flex:1"><input type="number" placeholder="—" value="${s.r}" min="0" oninput="updSet('${ex.replace(/'/g,"\\'")}',${si},'r',this.value)"></div>
         <button class="btn-ghost btn" onclick="addSetTo('${ex.replace(/'/g,"\\'")}')">+ serie</button>
       </div>`).join('')}
@@ -405,7 +405,12 @@ function renderLogging(){
 }
 
 function updSet(ex,si,f,v){if(!exSets[ex])exSets[ex]=[{w:'',r:''}];exSets[ex][si][f]=v;}
-function addSetTo(ex){if(!exSets[ex])exSets[ex]=[{w:'',r:''}];exSets[ex].push({w:'',r:''});renderLogging();}
+function addSetTo(ex){
+  if(!exSets[ex])exSets[ex]=[{w:'',r:''}];
+  const last=exSets[ex][exSets[ex].length-1];
+  exSets[ex].push({w:last.w,r:last.r});
+  renderLogging();
+}
 
 function saveSession(){
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
@@ -452,7 +457,7 @@ function renderStats(){
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat-cell"><div class="stat-n">${week.length}</div><div class="stat-l">sesiones</div></div>
     <div class="stat-cell"><div class="stat-n">${totalSets}</div><div class="stat-l">series</div></div>
-    <div class="stat-cell"><div class="stat-n">${Math.round(totalVol).toLocaleString()}</div><div class="stat-l">kg vol</div></div>`;
+    <div class="stat-cell"><div class="stat-n">${Math.round(totalVol).toLocaleString()}</div><div class="stat-l">lb vol</div></div>`;
   const days=['do','lu','ma','mi','ju','vi','sá'];
   const dc=Array(7).fill(0);
   const today=new Date().getDay();
@@ -484,7 +489,7 @@ function renderHistory(){
     const dateStr=new Date(s.date).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     const mNames=s.muscles.map(m=>MUSCLES[m]?.name||m).join(', ');
     const exRows=s.exercises.map(ex=>{
-      const chips=ex.sets.map((st,i)=>`<span style="font-size:11px;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:2px 8px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}kg×${st.r||'—'}</span>`).join('');
+      const chips=ex.sets.map((st,i)=>`<span style="font-size:11px;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:2px 8px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}lb×${st.r||'—'}</span>`).join('');
       return`<div style="margin-bottom:8px"><div style="font-size:13px;font-weight:500;margin-bottom:4px">${ex.name}</div><div>${chips}</div></div>`;
     }).join('');
     return`<div class="session-item">
