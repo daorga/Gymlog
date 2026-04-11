@@ -491,19 +491,28 @@ function renderApiKeyStatus(){
   }
 }
 
-function styleAI(html){
-  // wrap each <section> nicely
-  return html
-    .replace(/<section>/g,'<div style="margin-bottom:14px;padding:14px;background:var(--bg2);border-radius:var(--r-md);border-left:3px solid var(--fg)">')
-    .replace(/<\/section>/g,'</div>')
-    .replace(/<h4>/g,'<div style="font-size:11px;font-weight:500;color:var(--fg3);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">')
-    .replace(/<\/h4>/g,'</div>')
-    .replace(/<p>/g,'<p style="font-size:13px;color:var(--fg2);line-height:1.65;margin:0">')
-    .replace(/<ul>/g,'<ul style="list-style:none;padding:0;margin:0">')
-    .replace(/<ol>/g,'<ol style="padding-left:16px;margin:0">')
-    .replace(/<li>/g,'<li style="font-size:13px;color:var(--fg2);line-height:1.65;padding:4px 0;border-bottom:1px solid var(--bdr)">')
-    .replace(/<\/li>/g,'</li>')
-    .replace(/<strong>/g,'<strong style="color:var(--fg)">');
+function styleAI(md){
+  // split into sections by ## headings
+  const parts = md.split(/^##\s+/m).filter(s=>s.trim());
+  if(!parts.length) return '<div style="font-size:13px;line-height:1.7;color:var(--fg2)">'+md+'</div>';
+  return parts.map(part=>{
+    const lines = part.trim().split('\n');
+    const title = lines[0].trim().replace(/\*\*/g,'');
+    const body  = lines.slice(1).filter(l=>l.trim());
+    const items = body.map(line=>{
+      const clean = line
+        .replace(/^[-*]\s*/,'')
+        .replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--fg)">$1</strong>');
+      if(!clean.trim()) return '';
+      return '<li style="font-size:13px;color:var(--fg2);line-height:1.6;padding:6px 0;border-bottom:1px solid var(--bdr);display:flex;gap:10px;align-items:flex-start"><span style="width:5px;height:5px;border-radius:50%;background:var(--fg);flex-shrink:0;margin-top:7px;display:inline-block"></span><span>'+clean+'</span></li>';
+    }).filter(Boolean).join('');
+    return '<div style="margin-bottom:12px;background:var(--bg2);border-radius:var(--r-md);overflow:hidden">'
+      +'<div style="padding:10px 14px;border-bottom:1px solid var(--bdr)">'
+      +'<span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--fg3)">'+title+'</span>'
+      +'</div>'
+      +(items?'<ul style="list-style:none;padding:4px 14px;margin:0">'+items+'</ul>':'')
+      +'</div>';
+  }).join('');
 }
 
 function formatAI(md){
@@ -556,28 +565,15 @@ async function analyzeWeek(){
     return `${fecha}\nMúsculos: ${musculos}\n${ejercicios}`;
   }).join('\n\n');
 
-  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento y responde ÚNICAMENTE con HTML usando exactamente esta estructura, sin texto fuera del HTML, sin markdown, sin explicaciones adicionales:
+  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento de la semana y da recomendaciones concretas para la próxima semana. Responde en español, usando exactamente estos títulos de sección con el símbolo ##:
 
-<section>
-<h4>Resumen de la semana</h4>
-<p>2-3 oraciones sobre lo que hizo bien.</p>
-</section>
-<section>
-<h4>Músculos que necesitan atención</h4>
-<ul><li>músculo: razón</li><li>músculo: razón</li></ul>
-</section>
-<section>
-<h4>Sube de peso</h4>
-<ul><li>Ejercicio: de Xlb a Ylb</li></ul>
-</section>
-<section>
-<h4>Cambia o agrega</h4>
-<ul><li>acción concreta</li></ul>
-</section>
-<section>
-<h4>Plan próxima semana</h4>
-<ol><li>ejercicio</li></ol>
-</section>
+## Resumen de la semana
+## Músculos que necesitan atención
+## Sube de peso
+## Cambia o agrega
+## Plan próxima semana
+
+Usa guiones para listas. Sé específico con números. Máximo 350 palabras.
 
 REGISTRO:
 \${resumen}`;
