@@ -462,6 +462,7 @@ function saveApiKey(){
   saveStore();
   document.getElementById('api-key-input').value='';
   renderApiKeyStatus();
+  alert('API key guardada. Ya puedes usar el análisis en la pestaña Semana.');
 }
 
 function clearApiKey(){
@@ -622,9 +623,12 @@ function renderStats(){
   const analyzeBtn=document.getElementById('analyze-btn');
   const analyzeWrap=document.getElementById('analyze-wrap');
   if(analyzeBtn){
-    analyzeBtn.style.display=apiKey?'':'none';
-    if(!apiKey && analyzeWrap){
-      analyzeWrap.innerHTML='<div style="font-size:12px;color:var(--fg3);text-align:center;padding:8px 0">Agrega tu API key en Ajustes para análisis con IA</div>';
+    if(apiKey){
+      analyzeBtn.style.display='block';
+      analyzeBtn.textContent='Analizar semana con IA';
+    } else {
+      analyzeBtn.style.display='none';
+      if(analyzeWrap) analyzeWrap.innerHTML='<div style="font-size:12px;color:var(--fg3);text-align:center;padding:8px 0">Agrega tu API key en <b>Ajustes</b> para análisis con IA</div>';
     }
   }
 }
