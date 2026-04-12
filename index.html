@@ -556,27 +556,58 @@ async function analyzeWeek(){
   result.style.display='none';
 
   const resumen=week.map(s=>{
-    const fecha=new Date(s.date).toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});
+    const fecha=new Date(s.date).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
     const musculos=s.muscles.map(m=>MUSCLES[m]?.name||m).join(', ');
     const ejercicios=s.exercises.map(ex=>{
-      const series=ex.sets.map((st,i)=>`Serie ${i+1}: ${st.w||0}lb x ${st.r||0} reps`).join(', ');
+      const seriesValidas=ex.sets.filter(st=>st.w||st.r);
+      if(!seriesValidas.length) return null;
+      const series=seriesValidas.map((st,i)=>`Serie ${i+1}: ${st.w||0}lb x ${st.r||0} reps`).join(', ');
       return `  - ${ex.name}: ${series}`;
-    }).join('\n');
-    return `${fecha}\nMúsculos: ${musculos}\n${ejercicios}`;
-  }).join('\n\n');
+    }).filter(Boolean).join('\n');
+    if(!ejercicios) return null;
+    return `SESIÓN: ${fecha}\nMúsculos trabajados: ${musculos}\n${ejercicios}`;
+  }).filter(Boolean).join('\n\n');
+  const diasEntrenados=[...new Set(week.map(s=>new Date(s.date).toLocaleDateString('es-MX',{weekday:'long'})))];
+  const todosLosMusculos=Object.values(MUSCLES).map(m=>m.name).join(', ');
+  const musculosEntrenados=[...new Set(week.flatMap(s=>s.muscles.map(m=>MUSCLES[m]?.name||m)))];
+  const musculosSinEntrenar=Object.keys(MUSCLES).filter(id=>!week.some(s=>s.muscles.includes(id))).map(id=>MUSCLES[id].name);
 
-  const prompt=`Eres un entrenador personal experto en hipertrofia y tonificación muscular. Analiza el siguiente registro de entrenamiento de la semana y da recomendaciones concretas para la próxima semana. Responde en español, usando exactamente estos títulos de sección con el símbolo ##:
+  const allMuscleNames=Object.keys(MUSCLES).map(k=>MUSCLES[k].name);
+  const trainedMuscleNames=[...new Set(week.flatMap(s=>s.muscles.map(m=>MUSCLES[m]?.name||m)))];
+  const missingMuscles=Object.keys(MUSCLES).filter(k=>!week.some(s=>s.muscles.includes(k))).map(k=>MUSCLES[k].name);
+  const sessionCount=week.length;
+
+  const prompt=`Eres un entrenador personal experto en hipertrofia muscular basada en evidencia científica. Analiza con precisión el siguiente registro real de entrenamiento.
+
+DATOS REALES DE LA SEMANA:
+- Sesiones completadas: ${sessionCount}
+- Músculos entrenados: ${trainedMuscleNames.join(', ')||'ninguno'}
+- Músculos NO entrenados esta semana: ${missingMuscles.join(', ')||'ninguno'}
+- Detalle por sesión:
+${resumen}
+
+PRINCIPIOS QUE DEBES APLICAR:
+- Para hipertrofia óptima cada grupo muscular necesita 2 sesiones por semana con 48-72h de descanso entre ellas
+- Solo recomienda subir peso en ejercicios que realmente aparecen en el registro y solo si las últimas series se completaron con buena forma (reps consistentes)
+- El volumen óptimo por músculo es 10-20 series semanales
+- Progresión de carga: aumentar 2.5-5lb cuando se completan todas las series en el rango de reps objetivo
+- NO inventes ejercicios ni músculos que no estén en el registro
+
+Responde en español usando exactamente estos títulos con ##:
 
 ## Resumen de la semana
-## Músculos que necesitan atención
+(qué hiciste realmente, cuántas sesiones, qué músculos cubriste, sé honesto)
+
+## Frecuencia muscular
+(qué músculos entrenaste 1 vez y cuáles 0 veces esta semana, y cuáles necesitan una segunda sesión para llegar a 2x/semana)
+
 ## Sube de peso
-## Cambia o agrega
+(SOLO para ejercicios que aparecen en el registro donde las series fueron consistentes. Formato: Ejercicio actual Xlb → Ylb. Si no hay candidatos claros dilo honestamente)
+
 ## Plan próxima semana
+(propón exactamente cuántos días entrenar, qué músculos cada día, respetando 48h de descanso entre el mismo grupo. Basa el plan en lo que ya hace, no en lo ideal abstracto)
 
-Usa guiones para listas. Sé específico con números. Máximo 350 palabras.
-
-REGISTRO:
-\${resumen}`;
+Usa guiones para listas. Sé directo y honesto. Máximo 400 palabras.`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
