@@ -402,30 +402,35 @@ function addCustomEx(mid){
 function renderLogging(){
   document.getElementById('exercises-logging').innerHTML=[...selEx].map(ex=>{
     const sets=exSets[ex]||[{w:'',r:''}];
+    const exE=ex.replace(/'/g,"\\'");
     return`<div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <span style="font-size:14px;font-weight:500;letter-spacing:-0.2px">${ex}</span>
-        <button class="btn-ghost btn" onclick="showTab('timer');if(!timerOn)startTimer()">⏱ descanso</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn-ghost btn" onclick="showTab('timer');if(!timerOn)startTimer()">⏱ descanso</button>
+          <button class="btn-ghost btn" style="color:var(--red);font-size:16px;padding:4px 8px" onclick="removeEx('${exE}')" title="Quitar ejercicio">✕</button>
+        </div>
       </div>
       <div style="display:flex;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">
         <div style="min-width:22px;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">N</div>
         <div style="flex:1;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">Peso lb</div>
         <div style="flex:1;font-size:10px;color:var(--fg3);letter-spacing:.04em;text-transform:uppercase">Reps</div>
-        <div style="min-width:52px"></div>
+        <div style="min-width:68px"></div>
       </div>
       ${sets.map((s,si)=>`<div class="set-row">
         <span style="min-width:22px;font-size:12px;color:var(--fg3);font-family:var(--fm)">${si+1}</span>
-        <div style="flex:1"><input type="number" placeholder="—" value="${s.w}" min="0" step="1" oninput="updSet('${ex.replace(/'/g,"\\'")}',${si},'w',this.value)"></div>
-        <div style="flex:1"><input type="number" placeholder="—" value="${s.r}" min="0" oninput="updSet('${ex.replace(/'/g,"\\'")}',${si},'r',this.value)"></div>
-        <button class="btn-ghost btn" onclick="addSetTo('${ex.replace(/'/g,"\\'")}')">+ serie</button>
+        <div style="flex:1"><input type="number" placeholder="—" value="${s.w}" min="0" step="1" oninput="updSet('${exE}',${si},'w',this.value)"></div>
+        <div style="flex:1"><input type="number" placeholder="—" value="${s.r}" min="0" oninput="updSet('${exE}',${si},'r',this.value)"></div>
+        <div style="display:flex;gap:2px">
+          <button class="btn-ghost btn" style="padding:4px 8px" onclick="addSetTo('${exE}')">+</button>
+          ${sets.length>1?`<button class="btn-ghost btn" style="padding:4px 8px;color:var(--red)" onclick="removeSet('${exE}',${si})">−</button>`:''}
+        </div>
       </div>`).join('')}
     </div>`;
   }).join('');
 }
 
 function updSet(ex,si,f,v){if(!exSets[ex])exSets[ex]=[{w:'',r:''}];exSets[ex][si][f]=v;}
-function removeSet(ex,si){if(!exSets[ex]||exSets[ex].length<=1)return;exSets[ex].splice(si,1);renderLogging();}
-function removeEx(ex){selEx.delete(ex);delete exSets[ex];if(!selEx.size){goStep2();return;}renderLogging();}
 function removeSet(ex,si){
   if(!exSets[ex]||exSets[ex].length<=1)return;
   exSets[ex].splice(si,1);
