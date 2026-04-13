@@ -93,10 +93,25 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
 .ex-section-label{font-size:11px;font-weight:500;color:var(--fg3);letter-spacing:0.06em;margin-bottom:8px;text-transform:uppercase}
 .custom-row{display:flex;gap:6px;margin-top:10px;align-items:center}
 .body-label{font-size:10px;color:var(--fg3);text-align:center;margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+.modal-bg{position:absolute;top:0;left:0;width:100%;background:rgba(0,0,0,0.35);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding-top:120px;min-height:100%}
+.modal-box{background:var(--bg);border-radius:var(--r-lg);padding:1.5rem;width:88%;max-width:340px;border:1px solid var(--bdr)}
+.modal-title{font-size:15px;font-weight:500;color:var(--fg);margin-bottom:8px}
+.modal-msg{font-size:13px;color:var(--fg2);line-height:1.6;margin-bottom:20px}
+.modal-btns{display:flex;gap:8px}
 </style>
 </head>
 <body>
 <div id="app">
+<div id="modal" style="display:none" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirmar</div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-btns">
+      <button class="btn" style="flex:1" id="modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn" style="flex:1;color:var(--red);border-color:var(--red-bdr)" id="modal-ok">Eliminar</button>
+    </div>
+  </div>
+</div>
   <div class="hdr" style="align-items:center">
     <svg width="210" height="42" viewBox="0 0 210 42" role="img" aria-label="GymLog">
       <g transform="translate(18,21)">
@@ -420,7 +435,7 @@ function renderLogging(){
       ${sets.map((s,si)=>`<div class="set-row">
         <span style="min-width:22px;font-size:12px;color:var(--fg3);font-family:var(--fm)">${si+1}</span>
         <div style="flex:1"><input type="number" placeholder="—" value="${s.w}" min="0" step="1" oninput="updSet('${exE}',${si},'w',this.value)"></div>
-        <div style="flex:1"><input type="number" placeholder="—" value="${s.r}" min="0" oninput="updSet('${exE}',${si},'r',this.value)"></div>
+        <div style="flex:1"><input type="number" placeholder="—" value="${s.r}" min="0" oninput="updSet('${exE}',${si},'r',this.value)" onblur="if(this.value&&exSets['${exE}']&&exSets['${exE}'][${si}]&&exSets['${exE}'][${si}].w){showTab('timer');startTimer();}"></div>
         <div style="display:flex;gap:2px">
           <button class="btn-ghost btn" style="padding:4px 8px" onclick="addSetTo('${exE}')">+</button>
           ${sets.length>1?`<button class="btn-ghost btn" style="padding:4px 8px;color:var(--red)" onclick="removeSet('${exE}',${si})">−</button>`:''}
@@ -437,21 +452,44 @@ function removeSet(ex,si){
   renderLogging();
 }
 function removeEx(ex){
+  const sets=exSets[ex]||[];
+  const hasData=sets.some(s=>s.w||s.r);
+  if(hasData){
+    showModal(
+      'Eliminar ejercicio',
+      ex+' ya tiene series registradas. ¿Seguro que quieres eliminarlo?',
+      ()=>{doRemoveEx(ex);}
+    );
+  } else {
+    doRemoveEx(ex);
+  }
+}
+function doRemoveEx(ex){
   selEx.delete(ex);
   delete exSets[ex];
   if(!selEx.size){goStep2();return;}
   renderLogging();
 }
+function showModal(title,msg,onOk){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-msg').textContent=msg;
+  document.getElementById('modal-ok').onclick=()=>{closeModal();onOk();};
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
 function addSetTo(ex){
   if(!exSets[ex])exSets[ex]=[{w:'',r:''}];
   const last=exSets[ex][exSets[ex].length-1];
   exSets[ex].push({w:last.w,r:last.r});
   renderLogging();
+  showTab('timer');
+  startTimer();
 }
 
 function saveSession(){
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
-  if(!confirm('¿Ya terminaste la sesión? Se guardará el entrenamiento de hoy.'))return;
+  showModal('Guardar sesión','¿Ya terminaste? Se guardará tu entrenamiento de hoy.',()=>{doSaveSession();});return;}
+function doSaveSession(){
   store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:[...selEx].map(ex=>({name:ex,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}))});
   saveStore();selM=new Set();selEx=new Set();exSets={};
   updateColors();renderPills();goStep1();showTab('stats');
