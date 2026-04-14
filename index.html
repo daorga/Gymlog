@@ -108,7 +108,7 @@ input:focus{outline:none;border-color:var(--fg);background:var(--bg)}
     <div class="modal-msg" id="modal-msg"></div>
     <div class="modal-btns">
       <button class="btn" style="flex:1" id="modal-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn" style="flex:1;color:var(--red);border-color:var(--red-bdr)" id="modal-ok">Eliminar</button>
+      <button class="btn btn-dark" style="flex:1" id="modal-ok">Confirmar</button>
     </div>
   </div>
 </div>
@@ -523,14 +523,13 @@ function addSetTo(ex){
   startTimer();
 }
 
-function saveSession(){doneEx=new Set();doneOrder=[];
+function saveSession(){
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
-  showModal('Guardar sesión','¿Ya terminaste? Se guardará tu entrenamiento de hoy.',()=>{doSaveSession();});return;}
+  showModal('Guardar sesión','¿Ya terminaste? Se guardará tu entrenamiento de hoy.',()=>{doSaveSession();});}
 function doSaveSession(){
-  const orderedExercises=[
-    ...doneOrder,
-    ...[...selEx].filter(ex=>!doneOrder.includes(ex))
-  ].filter(ex=>selEx.has(ex)).map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}));
+  const doneArr=[...selEx].filter(e=>doneEx.has(e));
+  const pendingArr=[...selEx].filter(e=>!doneEx.has(e));
+  const orderedExercises=[...doneArr,...pendingArr].map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}));
   store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:orderedExercises});
   saveStore();selM=new Set();selEx=new Set();exSets={};
   doneEx=new Set();updateColors();renderPills();goStep1();showTab('stats');
