@@ -462,7 +462,7 @@ function renderLogging(){
 }
 
 function markExDone(ex){
-  showConfirm('¿Terminaste '+ex+'?','Sí, terminé',function(){
+  showModal('Ejercicio terminado','¿Terminaste todas las series de '+ex+'?',function(){
     doneEx.add(ex);
     const arr=[...selEx];
     const active=arr.filter(e=>!doneEx.has(e));
