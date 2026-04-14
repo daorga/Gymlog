@@ -323,7 +323,7 @@ function saveStore(){try{localStorage.setItem('gymlog_v5',JSON.stringify(store))
 let store=loadStore();
 if(!store.sessions)store.sessions=[];
 if(!store.customEx)store.customEx={};
-let selM=new Set(),selEx=new Set(),exSets={};
+let selM=new Set(),selEx=new Set(),exSets={},doneEx=new Set();
 let timerTotal=60,timerRem=60,timerOn=false,timerIv=null,timerEnd=null;
 
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
@@ -373,7 +373,7 @@ function renderPills(){
 function setStep(n){[1,2,3].forEach(i=>{const d=document.getElementById('sd'+i);d.className='step-dot '+(i<n?'done':i===n?'active':'pending');});}
 function goStep1(){['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i===0?'':'none');setStep(1);}
 function goStep2(){if(!selM.size){alert('Selecciona al menos un músculo');return;}['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i===1?'':'none');setStep(2);renderExOpts();}
-function goStep3(){if(!selEx.size){alert('Selecciona al menos un ejercicio');return;}['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i===2?'':'none');setStep(3);renderLogging();}
+function goStep3(){if(!selEx.size){alert('Selecciona al menos un ejercicio');return;}doneEx=new Set();['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i===2?'':'none');setStep(3);renderLogging();}
 
 function renderExOpts(){
   let html='';
@@ -496,7 +496,7 @@ function doSaveSession(){
   ].filter(ex=>selEx.has(ex)).map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}));
   store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:orderedExercises});
   saveStore();selM=new Set();selEx=new Set();exSets={};
-  updateColors();renderPills();goStep1();showTab('stats');
+  doneEx=new Set();updateColors();renderPills();goStep1();showTab('stats');
 }
 
 function showTab(name){
