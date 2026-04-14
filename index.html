@@ -486,11 +486,15 @@ function addSetTo(ex){
   startTimer();
 }
 
-function saveSession(){
+function saveSession(){doneEx=new Set();doneOrder=[];
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
   showModal('Guardar sesión','¿Ya terminaste? Se guardará tu entrenamiento de hoy.',()=>{doSaveSession();});return;}
 function doSaveSession(){
-  store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:[...selEx].map(ex=>({name:ex,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}))});
+  const orderedExercises=[
+    ...doneOrder,
+    ...[...selEx].filter(ex=>!doneOrder.includes(ex))
+  ].filter(ex=>selEx.has(ex)).map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}));
+  store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:orderedExercises});
   saveStore();selM=new Set();selEx=new Set();exSets={};
   updateColors();renderPills();goStep1();showTab('stats');
 }
@@ -768,9 +772,10 @@ function renderHistory(){
   el.innerHTML=store.sessions.slice(0,30).map((s,si)=>{
     const dateStr=new Date(s.date).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     const mNames=s.muscles.map(m=>MUSCLES[m]?.name||m).join(', ');
-    const exRows=s.exercises.map(ex=>{
+    const exRows=s.exercises.map((ex,ei)=>{
       const chips=ex.sets.map((st,i)=>`<span style="font-size:11px;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:2px 8px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}lb×${st.r||'—'}</span>`).join('');
-      return`<div style="margin-bottom:8px"><div style="font-size:13px;font-weight:500;margin-bottom:4px">${ex.name}</div><div>${chips}</div></div>`;
+      const orderLabel=ex.order?`<span style="font-size:10px;color:var(--fg3);font-family:var(--fm);background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:1px 7px;margin-right:6px">${ex.order}°</span>`:'';
+      return`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;font-size:13px;font-weight:500;margin-bottom:4px">${orderLabel}${ex.name}</div><div>${chips}</div></div>`;
     }).join('');
     return`<div class="session-item">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
