@@ -695,7 +695,7 @@ function delSess(i){showModal('Eliminar sesión','¿Seguro?',()=>{store.sessions
 // ── AJUSTES ───────────────────────────────────────────────────────────────────
 function renderSettings(){
     }
-function setUnit(u){'lb'=u;saveStore();updUnit();}
+
 function renderSettings(){
   if(!store.muscleRest)store.muscleRest={...DEFAULT_REST};
   const el=document.getElementById('rest-config');
