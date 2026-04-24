@@ -257,22 +257,14 @@ input:focus{outline:none;border-color:var(--acc)}
     <!-- AJUSTES -->
     <div id="tab-settings" style="display:none">
       <div class="card">
-        <div class="lbl" style="margin-bottom:8px">Unidad de peso</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="btn-lb" onclick="setUnit('lb')">Libras (lb)</button>
-          <button class="btn" id="btn-kg" onclick="setUnit('kg')">Kilogramos (kg)</button>
-        </div>
+        <div class="lbl" style="margin-bottom:4px">Días de descanso por músculo</div>
+        <div style="font-size:12px;color:var(--fg3);margin-bottom:14px;line-height:1.5">Cuántos días debe descansar cada músculo antes de poder volver a seleccionarlo.</div>
+        <div id="rest-config"></div>
+        <button class="btn btn-acc btn-sm" style="margin-top:14px;width:100%" onclick="saveRestConfig()">Guardar cambios</button>
       </div>
       <div class="card">
-        <div class="lbl" style="margin-bottom:8px">Días de descanso por músculo</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="number" id="rest-days-input" min="1" max="7" style="width:70px">
-          <span style="font-size:13px;color:var(--fg2)">días mínimo entre sesiones</span>
-        </div>
-        <button class="btn btn-sm btn-acc" style="margin-top:10px" onclick="saveRestDays()">Guardar</button>
-      </div>
-      <div class="card">
-        <div class="lbl" style="margin-bottom:8px">Datos</div>
+        <div class="lbl" style="margin-bottom:8px">Exportar datos</div>
+        <div style="font-size:13px;color:var(--fg2);margin-bottom:12px;line-height:1.6">Descarga un respaldo de todas tus sesiones en formato JSON.</div>
         <button class="btn btn-sm" onclick="exportData()">Exportar mis datos</button>
       </div>
     </div>
@@ -320,13 +312,19 @@ const BASE_EX={
   pantorrilla:['Elevación de pie','Elevación sentado','Prensa en puntillas','Donkey calf raise','Elevación unilateral','Seated calf raise máquina']
 };
 
+// Default rest days per muscle (science-based)
+const DEFAULT_REST={
+  pecho:2, hombros:2, biceps:2, triceps:2, antebrazo:1,
+  espalda:2, abdomen:1, gluteos:2, cuad:2, isquio:2, pantorrilla:1
+};
+
 function loadStore(){try{return JSON.parse(localStorage.getItem('gymlog_clean')||'{}')}catch(e){return{}}}
 function saveStore(){try{localStorage.setItem('gymlog_clean',JSON.stringify(store))}catch(e){}}
 let store=loadStore();
 if(!store.sessions)store.sessions=[];
 if(!store.customEx)store.customEx={};
-if(!store.unit)store.unit='lb';
-if(!store.restDays)store.restDays=2;
+
+
 
 let selM=new Set(),selEx=new Set(),exSets={},doneEx=new Set(),doneSets={};
 let tTotal=90,tRem=90,tOn=false,tIv=null,tEnd=0;
@@ -334,14 +332,12 @@ const CIRC=452.4;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('hdrdate').textContent=new Date().toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
-updUnit();
-document.getElementById('rest-days-input').value=store.restDays;
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function dSince(d){const a=new Date(d),b=new Date();return Math.floor((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5);}
 function getLastDays(){const L={};store.sessions.forEach(s=>{const d=dSince(s.date);s.muscles.forEach(m=>{if(L[m]===undefined||d<L[m])L[m]=d;});});return L;}
-function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<store.restDays;}
-function dLeft(id){const L=getLastDays();return Math.max(0,store.restDays-(L[id]??store.restDays));}
+function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<2;}
+function dLeft(id){const L=getLastDays();return Math.max(0,2-(L[id]??2));}
 function rdyDate(id){const d=new Date();d.setDate(d.getDate()+dLeft(id));return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});}
 function getWeekSessions(){const wa=new Date(Date.now()-7*864e5);return store.sessions.filter(s=>new Date(s.date)>=wa);}
 
@@ -443,7 +439,7 @@ function renderExOpts(){
       <div>${all.map(ex=>{
         const isSel=selEx.has(ex),isC=custom.includes(ex);
         const maxW=getMaxWeight(ex);
-        const hint=maxW?`<span class="pw-hint">${maxW}${store.unit} max</span>`:'';
+        const hint=maxW?`<span class="pw-hint">${maxW}${'lb'} max</span>`:'';
         const del=isC?` <button onclick="delCEx('${mid}','${ex.replace(/'/g,"\'")}',event)" style="font-size:10px;padding:0 3px;border:none;background:transparent;color:var(--red);cursor:pointer">✕</button>`:'';
         return`<span class="pill${isSel?' sel':''}${isC?' cust':''}" onclick="toggleEx(this,'${ex.replace(/'/g,"\'")}',${isSel})">${ex}${hint}${del}</span>`;
       }).join('')}</div>
@@ -511,7 +507,7 @@ function renderLog(){
       <div class="exhdr">
         <div>
           <div style="font-size:14px;font-weight:500">${ex}</div>
-          ${maxW?`<div style="font-size:11px;color:var(--acc);margin-top:2px;font-family:var(--fm)">Máx previo: ${maxW}${store.unit}</div>`:''}
+          ${maxW?`<div style="font-size:11px;color:var(--acc);margin-top:2px;font-family:var(--fm)">Máx previo: ${maxW}${'lb'}</div>`:''}
         </div>
         <div style="display:flex;gap:5px;align-items:center">
           <button class="btn-ghost" onclick="showTab('timer');if(!tOn)startTimer()" style="font-size:12px">⏱</button>
@@ -521,7 +517,7 @@ function renderLog(){
       <div class="exbody">
         <div style="display:flex;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">
           <div style="min-width:20px;font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg3)">#</div>
-          <div style="flex:1;font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg3)">Peso ${store.unit}</div>
+          <div style="flex:1;font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg3)">Peso ${'lb'}</div>
           <div style="flex:1;font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg3)">Reps</div>
           <div style="min-width:68px"></div>
         </div>
@@ -640,7 +636,7 @@ function renderSemana(){
   document.getElementById('stat-grid').innerHTML=`
     <div class="scell"><div class="snum">${week.length}</div><div class="slbl">sesiones</div></div>
     <div class="scell"><div class="snum">${tS}</div><div class="slbl">series</div></div>
-    <div class="scell"><div class="snum">${tV>=1000?Math.round(tV/100)/10+'k':Math.round(tV)}</div><div class="slbl">${store.unit} vol</div></div>`;
+    <div class="scell"><div class="snum">${tV>=1000?Math.round(tV/100)/10+'k':Math.round(tV)}</div><div class="slbl">${'lb'} vol</div></div>`;
 
   const days=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
   const dc=Array(7).fill(0);const tod=new Date().getDay();
@@ -681,7 +677,7 @@ function renderHistory(){
     const ds=new Date(s.date).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     const mn=(s.muscles||[]).map(m=>MUSCLES[m]?.name||m).join(', ');
     const exRows=(s.exercises||[]).map(ex=>{
-      const ch=(ex.sets||[]).map((st,i)=>`<span style="font-size:11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:2px 7px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}${store.unit}×${st.r||'—'}</span>`).join('');
+      const ch=(ex.sets||[]).map((st,i)=>`<span style="font-size:11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:2px 7px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}${'lb'}×${st.r||'—'}</span>`).join('');
       return`<div style="margin-bottom:7px"><div style="font-size:13px;font-weight:500;margin-bottom:4px">${ex.name}</div><div>${ch}</div></div>`;
     }).join('');
     return`<div class="sessitem">
@@ -698,22 +694,39 @@ function delSess(i){showModal('Eliminar sesión','¿Seguro?',()=>{store.sessions
 
 // ── AJUSTES ───────────────────────────────────────────────────────────────────
 function renderSettings(){
-  updUnit();
-  document.getElementById('rest-days-input').value=store.restDays;
+    }
+function setUnit(u){'lb'=u;saveStore();updUnit();}
+function renderSettings(){
+  if(!store.muscleRest)store.muscleRest={...DEFAULT_REST};
+  const el=document.getElementById('rest-config');
+  el.innerHTML=Object.keys(MUSCLES).map(id=>{
+    const days=getMuscleRest(id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bdr)">
+      <span style="font-size:13px">${MUSCLES[id].name}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="adjRest('${id}',-1)" style="width:28px;height:28px;border:1px solid var(--bdr2);border-radius:6px;background:transparent;color:var(--fg);cursor:pointer;font-size:16px;font-family:var(--ff)">−</button>
+        <span style="font-family:var(--fm);font-size:14px;color:var(--acc);min-width:20px;text-align:center" id="rd-${id}">${days}</span>
+        <button onclick="adjRest('${id}',1)" style="width:28px;height:28px;border:1px solid var(--bdr2);border-radius:6px;background:transparent;color:var(--fg);cursor:pointer;font-size:16px;font-family:var(--ff)">+</button>
+        <span style="font-size:12px;color:var(--fg3)">d</span>
+      </div>
+    </div>`;
+  }).join('');
 }
-function setUnit(u){store.unit=u;saveStore();updUnit();}
-function updUnit(){
-  document.getElementById('btn-lb').style.background=store.unit==='lb'?'var(--acc)':'transparent';
-  document.getElementById('btn-lb').style.color=store.unit==='lb'?'#0d0d0d':'var(--fg2)';
-  document.getElementById('btn-lb').style.borderColor=store.unit==='lb'?'var(--acc)':'var(--bdr2)';
-  document.getElementById('btn-kg').style.background=store.unit==='kg'?'var(--acc)':'transparent';
-  document.getElementById('btn-kg').style.color=store.unit==='kg'?'#0d0d0d':'var(--fg2)';
-  document.getElementById('btn-kg').style.borderColor=store.unit==='kg'?'var(--acc)':'var(--bdr2)';
+function adjRest(id,delta){
+  if(!store.muscleRest)store.muscleRest={...DEFAULT_REST};
+  const cur=getMuscleRest(id);
+  const nv=Math.max(0,Math.min(7,cur+delta));
+  store.muscleRest[id]=nv;
+  const el=document.getElementById('rd-'+id);
+  if(el)el.textContent=nv;
 }
-function saveRestDays(){
-  const v=parseInt(document.getElementById('rest-days-input').value);
-  if(v>=1&&v<=7){store.restDays=v;saveStore();updateColors();alert('Guardado: '+v+' días de descanso.');}
+function saveRestConfig(){
+  saveStore();updateColors();
+  const btn=event.target;
+  btn.textContent='✓ Guardado';
+  setTimeout(()=>btn.textContent='Guardar cambios',2000);
 }
+
 function exportData(){const b=new Blob([JSON.stringify(store,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='gymlog-data.json';a.click();}
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
