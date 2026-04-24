@@ -336,8 +336,9 @@ document.getElementById('hdrdate').textContent=new Date().toLocaleDateString('es
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function dSince(d){const a=new Date(d),b=new Date();return Math.floor((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5);}
 function getLastDays(){const L={};store.sessions.forEach(s=>{const d=dSince(s.date);s.muscles.forEach(m=>{if(L[m]===undefined||d<L[m])L[m]=d;});});return L;}
-function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<2;}
-function dLeft(id){const L=getLastDays();return Math.max(0,2-(L[id]??2));}
+function getMuscleRest(id){return(store.muscleRest&&store.muscleRest[id]!==undefined)?store.muscleRest[id]:(DEFAULT_REST[id]??2);}
+function isBlocked(id){const L=getLastDays();return L[id]!==undefined&&L[id]<getMuscleRest(id);}
+function dLeft(id){const L=getLastDays();return Math.max(0,getMuscleRest(id)-(L[id]??getMuscleRest(id)));}
 function rdyDate(id){const d=new Date();d.setDate(d.getDate()+dLeft(id));return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});}
 function getWeekSessions(){const wa=new Date(Date.now()-7*864e5);return store.sessions.filter(s=>new Date(s.date)>=wa);}
 
