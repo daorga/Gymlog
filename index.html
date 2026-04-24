@@ -392,7 +392,7 @@ let store=ld();
 if(!store.sessions)store.sessions=[];
 if(!store.customEx)store.customEx={};
 if(!store.rutinaConfig)store.rutinaConfig=null;
-let selM=new Set(),selEx=new Set(),exSets={},doneEx=new Set(),doneSets={};
+let selM=new Set(),selEx=new Set(),exSets={},doneEx=new Set(),doneSets={},currentPPLPhase=null;
 let tTotal=90,tRem=90,tOn=false,tIv=null,tEnd=0;
 let curScr='today';
 let rdDays=4,rdGoals={};
@@ -416,6 +416,122 @@ function sugW(exName,gk){
   if(last.reps>=rMax+2){s=Math.round((last.weight*1.05)/2.5)*2.5;note='↑ sube';}
   else if(last.reps<rMin-1){s=Math.round((last.weight*0.95)/2.5)*2.5;note='↓ baja';}
   return{weight:s,note,lastReps:last.reps};
+}
+
+
+// ═══════ PPL PROGRAM ═══════
+const PPL={
+  push:{label:'Push',sub:'Pecho · Hombros · Tríceps',muscles:['pecho','hombros','triceps'],
+    A:[
+      {name:'Press banca plano',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Press banca inclinado',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Aperturas mancuerna plano',sets:3,repsTarget:[15,12,12],type:'flat'},
+      {name:'Press Arnold',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Elevaciones laterales',sets:4,repsTarget:[15,15,12,12],type:'flat'},
+      {name:'Extensión polea alta cuerda',sets:4,repsTarget:[12,12,10,10],type:'flat'},
+      {name:'Press francés barra',sets:3,repsTarget:[12,10,10],type:'flat'},
+    ],
+    B:[
+      {name:'Press banca declinado',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Crossover polea alta',sets:4,repsTarget:[15,12,12,12],type:'flat'},
+      {name:'Peck deck máquina',sets:3,repsTarget:[15,15,12],type:'flat'},
+      {name:'Press militar barra',sets:4,repsTarget:[10,8,8,6],type:'pyramid'},
+      {name:'Elevaciones frontales',sets:3,repsTarget:[12,12,12],type:'flat'},
+      {name:'Fondos cerrados',sets:3,repsTarget:[12,10,10],type:'flat'},
+      {name:'Patada de tríceps',sets:3,repsTarget:[15,12,12],type:'flat'},
+    ]
+  },
+  pull:{label:'Pull',sub:'Espalda · Bíceps · Antebrazo',muscles:['espalda','biceps','antebrazo'],
+    A:[
+      {name:'Jalón agarre ancho',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Remo con barra',sets:4,repsTarget:[10,8,8,6],type:'pyramid'},
+      {name:'Remo cable sentado',sets:3,repsTarget:[12,10,10],type:'flat'},
+      {name:'Pull-over polea',sets:3,repsTarget:[15,12,12],type:'flat'},
+      {name:'Curl barra recta',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Curl martillo',sets:3,repsTarget:[12,12,10],type:'flat'},
+      {name:'Curl muñeca barra',sets:3,repsTarget:[15,15,12],type:'flat'},
+    ],
+    B:[
+      {name:'Dominadas',sets:4,repsTarget:[10,8,8,6],type:'pyramid'},
+      {name:'Remo mancuerna',sets:4,repsTarget:[12,10,10,8],type:'pyramid'},
+      {name:'Remo en máquina',sets:3,repsTarget:[12,12,10],type:'flat'},
+      {name:'Jalón neutro',sets:3,repsTarget:[12,10,10],type:'flat'},
+      {name:'Curl mancuerna alterno',sets:4,repsTarget:[12,12,10,10],type:'flat'},
+      {name:'Curl predicador',sets:3,repsTarget:[12,10,10],type:'flat'},
+      {name:'Farmer carry',sets:3,repsTarget:[12,12,12],type:'flat'},
+    ]
+  },
+  legs:{label:'Legs',sub:'Cuádriceps · Isquios · Glúteos · Pantorrilla',muscles:['cuad','isquio','gluteos','pantorrilla'],
+    A:[
+      {name:'Sentadilla barra',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Prensa de pierna',sets:4,repsTarget:[15,12,10,10],type:'pyramid'},
+      {name:'Extensión cuádriceps máquina',sets:3,repsTarget:[15,15,12],type:'flat'},
+      {name:'Peso muerto rumano',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Curl femoral tumbado',sets:3,repsTarget:[12,12,10],type:'flat'},
+      {name:'Hip thrust barra',sets:4,repsTarget:[12,10,10,8],type:'pyramid'},
+      {name:'Elevación de pie',sets:4,repsTarget:[20,15,15,15],type:'flat'},
+    ],
+    B:[
+      {name:'Hack squat',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Sentadilla búlgara',sets:3,repsTarget:[12,10,10],type:'flat'},
+      {name:'Leg press unilateral',sets:3,repsTarget:[12,12,10],type:'flat'},
+      {name:'Peso muerto piernas rígidas',sets:4,repsTarget:[12,10,8,8],type:'pyramid'},
+      {name:'Curl femoral sentado',sets:3,repsTarget:[12,12,10],type:'flat'},
+      {name:'Abducción máquina',sets:3,repsTarget:[15,15,15],type:'flat'},
+      {name:'Elevación sentado',sets:4,repsTarget:[20,15,15,15],type:'flat'},
+    ]
+  }
+};
+const PPL_SEQ=[
+  {phase:'push',variant:'A'},{phase:'pull',variant:'A'},{phase:'legs',variant:'A'},
+  {phase:'push',variant:'B'},{phase:'pull',variant:'B'},{phase:'legs',variant:'B'}
+];
+
+function getPPLIdx(){
+  return store.sessions.filter(s=>s.pplPhase!=null).length%6;
+}
+function getTodayPPL(){
+  const idx=getPPLIdx(),seq=PPL_SEQ[idx],program=PPL[seq.phase];
+  return{idx,seq,program,exercises:program[seq.variant]};
+}
+function computeSetWeights(exName,repsTarget,type){
+  const last=getLW(exName);
+  if(!last) return repsTarget.map(r=>({targetReps:r,suggestedWeight:null,note:'empieza ligero'}));
+  const topReps=repsTarget[repsTarget.length-1];
+  let w=last.weight;
+  if(last.reps>=topReps) w=Math.round((last.weight+5)/2.5)*2.5;
+  else if(last.reps<topReps-3) w=Math.round((last.weight-2.5)/2.5)*2.5;
+  return repsTarget.map((r,i)=>{
+    let sw=w;
+    if(type==='pyramid'){
+      if(i===0) sw=Math.round((w*0.80)/2.5)*2.5;
+      else if(i===1) sw=Math.round((w*0.90)/2.5)*2.5;
+    }
+    const note=i===0&&type==='pyramid'?'calentamiento':i===repsTarget.length-1?(last.reps>=topReps?'↑ subiste':'al fallo'):'';
+    return{targetReps:r,suggestedWeight:Math.max(sw,5),note};
+  });
+}
+async function getCoachAdvice(ctx){
+  if(!store.apiKey) return null;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':store.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,
+        system:'Eres un coach de fitness experto. Usuario hace recomposición corporal. Trabaja en lb. Responde en español, máximo 2 oraciones. Sé directo y motivador.',
+        messages:[{role:'user',content:ctx}]})
+    });
+    const d=await r.json();
+    return d.content&&d.content[0]?d.content[0].text:null;
+  }catch(e){return null;}
+}
+function launchPPLDay(){
+  const ppl=getTodayPPL();
+  const muscles=ppl.program.muscles,exNames=ppl.exercises.map(e=>e.name);
+  currentPPLPhase=ppl.seq.phase+'-'+ppl.seq.variant;
+  const pplExData={};
+  ppl.exercises.forEach(ex=>{pplExData[ex.name]=computeSetWeights(ex.name,ex.repsTarget,ex.type);});
+  _launchRoutine(muscles,exNames,pplExData);
 }
 
 // NAV
@@ -630,21 +746,42 @@ function saveSession(){
   if(!selEx.size){alert('Agrega al menos un ejercicio');return;}
   showModal('Guardar sesión','¿Ya terminaste? Se guardará tu entrenamiento.',()=>{
     const da=[...selEx].filter(e=>doneEx.has(e)),pa=[...selEx].filter(e=>!doneEx.has(e));
-    store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],exercises:[...da,...pa].map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}))});
+    store.sessions.unshift({date:new Date().toISOString(),muscles:[...selM],pplPhase:currentPPLPhase,exercises:[...da,...pa].map((ex,i)=>({name:ex,order:i+1,sets:(exSets[ex]||[]).map(s=>({w:s.w,r:s.r}))}))});currentPPLPhase=null;
     sd();selM=new Set();selEx=new Set();exSets={};doneEx=new Set();doneSets={};
     updateBodyColors();renderSP();goStep1();showScreen('today');
   });
 }
 
+// Store routine data globally to avoid JSON parsing issues with special chars
+let pendingRoutine=null;
+
 function startRoutineDay(musclesJ,exercisesJ){
-  const muscles=JSON.parse(musclesJ),exercises=JSON.parse(exercisesJ);
+  try{
+    // Try direct parse first
+    const muscles=JSON.parse(musclesJ),exercises=JSON.parse(exercisesJ);
+    _launchRoutine(muscles,exercises);
+  } catch(e){
+    // Fallback: use stored routine data
+    if(pendingRoutine){
+      _launchRoutine(pendingRoutine.muscles,pendingRoutine.exercises);
+      pendingRoutine=null;
+    }
+  }
+}
+
+function _launchRoutine(muscles,exercises,pplExData){
   selM=new Set(muscles);selEx=new Set(exercises);
+  exSets={};doneEx=new Set();doneSets={};
   exercises.forEach(ex=>{
-    const last=getLSD(ex);
-    if(last)exSets[ex]=last.map(s=>({w:s.w,r:s.r,fl:true}));
-    else exSets[ex]=[{w:'',r:''}];
+    if(pplExData && pplExData[ex]){
+      exSets[ex]=pplExData[ex].map(s=>({w:s.suggestedWeight?String(s.suggestedWeight):'',r:String(s.targetReps),fl:true,note:s.note||''}));
+    } else {
+      const last=getLSD(ex);
+      if(last)exSets[ex]=last.map(s=>({w:s.w,r:s.r,fl:true}));
+      else exSets[ex]=[{w:'',r:''}];
+    }
   });
-  doneSets={};doneEx=new Set();updateBodyColors();
+  updateBodyColors();
   showScreen('train');
   ['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i===2?'':'none');
   setStep(3);renderLog();
@@ -654,116 +791,83 @@ function startRoutineDay(musclesJ,exercisesJ){
 function getWeekSessions(){const wa=new Date(Date.now()-7*864e5);return store.sessions.filter(s=>new Date(s.date)>=wa);}
 function renderToday(){
   const el=document.getElementById('today-ct');
-  const cfg=store.rutinaConfig;
   const today=new Date().getDay();
   const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const SD=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
   const week=getWeekSessions();
   const trainedDays=new Set(week.map(s=>new Date(s.date).getDay()));
-  let h=`<div style="margin-top:18px">
-    <div class="today-day">Hoy — ${DAYS[today]}</div>`;
+  const ppl=getTodayPPL();
+  const {seq,program,exercises,idx}=ppl;
+  const LABELS=['Push A','Pull A','Legs A','Push B','Pull B','Legs B'];
+  const pplExData={};
+  exercises.forEach(ex=>{pplExData[ex.name]=computeSetWeights(ex.name,ex.repsTarget,ex.type);});
 
-  if(!cfg){
-    h+=`<div class="today-title" style="margin-bottom:4px">Bienvenido a GymLog</div>
-    <div class="today-sub">Configura tu rutina para ver tu plan diario con pesos sugeridos.</div>
-    <div class="card" style="border-color:rgba(232,255,0,.3);background:rgba(232,255,0,.04)">
-      <div style="font-family:var(--ffc);font-size:16px;font-weight:800;color:var(--fg);margin-bottom:8px">Crear mi rutina</div>
-      <div style="font-size:13px;color:var(--fg2);margin-bottom:13px;line-height:1.6">Define tus objetivos y días disponibles. El coach arma tu programa y sugiere pesos basados en tu historial.</div>
-      <button class="btn btna btnf" onclick="showScreen('rutina')">Configurar ahora →</button>
-    </div>`;
-  } else {
-    const sessWeek=store.sessions.filter(s=>dSince(s.date)<cfg.days).length;
-    const rdIdx=sessWeek%cfg.days;
-    const todayMuscles=cfg.schedule[rdIdx]||[];
-    if(todayMuscles.length===0){
-      const cs=CARDIO[sessWeek%CARDIO.length];
-      h+=`<div class="today-title">Descanso activo</div>
-      <div class="today-sub">No toca pesas — ideal para cardio o movilidad</div>
-      <div class="ccard">
-        <div class="ctype">${cs.type}</div>
-        <div class="cdtl">${cs.dur} · ${cs.int}</div>
-        <div style="font-size:12px;color:var(--fg3);margin-top:7px;line-height:1.5;font-style:italic">${cs.tip}</div>
-      </div>`;
-    } else {
-      const mNames=todayMuscles.map(m=>MUSCLES[m]?.name||m).join(' + ');
-      const exList=todayMuscles.flatMap(m=>{
-        const g=cfg.goals[m]||'Volumen',p=GP[g]||{s:'3-4',r:'8-12',rest:90};
-        return(BEX[m]||[]).slice(0,2).map(n=>({muscle:m,name:n,goal:g,params:p,sug:sugW(n,g)}));
-      });
-      const ms=JSON.stringify(todayMuscles),exs=JSON.stringify(exList.map(e=>e.name));
-      h+=`<div class="today-title">Día ${rdIdx+1} — ${mNames}</div>
-      <div class="today-sub">${exList.length} ejercicios · el coach te guía</div>
-      <div class="card" style="margin-bottom:12px">
-        <div class="slabel" style="margin-bottom:10px">Plan de hoy</div>
-        ${exList.map(e=>`<div class="rexrow" style="padding:9px 0;border-bottom:1px solid var(--bdr)">
-          <div>
-            <div style="font-size:13px;font-weight:500">${e.name}</div>
-            <div style="font-size:11px;color:var(--fg3);margin-top:3px">${e.params.s} series · ${e.params.r} reps · ${e.params.rest}s descanso</div>
-            ${e.sug?`<div style="font-size:11px;color:var(--acc);margin-top:2px;font-family:var(--fm)">${e.sug.weight}lb — ${e.sug.note} (última: ${e.sug.lastReps} reps)</div>`:`<div style="font-size:11px;color:var(--fg3);margin-top:2px">Sin historial — empieza ligero</div>`}
-          </div>
-        </div>`).join('')}
-      </div>
-      <button class="btn btna btnf" style="margin-bottom:10px" onclick="startRoutineDay('${ms.replace(/'/g,"\\'")}','${exs.replace(/'/g,"\\'")}')">Empezar entrenamiento →</button>`;
-      const cs=CARDIO[rdIdx%CARDIO.length];
-      h+=`<div class="ccard">
-        <div style="font-family:var(--ffc);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:4px">Coach — Cardio opcional</div>
-        <div class="ctype" style="font-size:15px">${cs.type}</div>
-        <div style="font-size:12px;color:var(--fg2);margin-top:3px">${cs.dur} · ${cs.int}</div>
-        <div style="font-size:11px;color:var(--fg3);margin-top:6px;line-height:1.5;font-style:italic">${cs.tip}</div>
-      </div>`;
-    }
+  let h='<div style="margin-top:18px">';
+  h+=`<div class="today-day">Hoy — ${DAYS[today]}</div>`;
+  h+=`<div class="today-title">${program.label} — ${LABELS[idx]}</div>`;
+  h+=`<div class="today-sub">${program.sub} · ${exercises.length} ejercicios</div>`;
+  h+='<div id="coach-msg" style="background:rgba(232,255,0,.06);border:1px solid rgba(232,255,0,.2);border-radius:var(--r2);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--fg2);line-height:1.6;display:none"></div>';
+
+  // Exercise plan card
+  h+='<div class="card" style="margin-bottom:10px"><div class="slabel" style="margin-bottom:12px">Plan de hoy · pesos sugeridos</div>';
+  exercises.forEach(ex=>{
+    const sets=pplExData[ex.name];
+    const hasSug=sets&&sets[0].suggestedWeight!==null;
+    h+=`<div style="padding:10px 0;border-bottom:1px solid var(--bdr)">`;
+    h+=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px">`;
+    h+=`<span style="font-size:13px;font-weight:500">${ex.name}</span>`;
+    h+=`<span style="font-family:var(--ffc);font-size:9px;font-weight:700;letter-spacing:.08em;color:${ex.type==='pyramid'?'var(--acc)':'var(--fg3)'}">`;
+    h+=`${ex.type==='pyramid'?'PIRÁMIDE':'PLANO'} · ${ex.sets} series</span></div>`;
+    h+='<div style="display:flex;gap:4px;flex-wrap:wrap">';
+    sets.forEach((s,i)=>{
+      h+=`<div style="background:var(--bg3);border:1px solid var(--bdr2);border-radius:6px;padding:5px 8px;text-align:center;min-width:56px">`;
+      h+=`<div style="font-family:var(--fm);font-size:12px;font-weight:500;color:${hasSug?'var(--acc)':'var(--fg3)'}">`;
+      h+=`${hasSug?s.suggestedWeight+'lb':'— lb'}</div>`;
+      h+=`<div style="font-family:var(--ffc);font-size:10px;font-weight:700;color:var(--fg3);letter-spacing:.04em">${s.targetReps} REPS</div>`;
+      if(s.note) h+=`<div style="font-size:9px;color:var(--fg3);margin-top:1px">${s.note}</div>`;
+      h+='</div>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  h+=`<button class="btn btna btnf" style="margin-bottom:12px" onclick="launchPPLDay()">Empezar entrenamiento →</button>`;
+
+  // Cardio
+  const cs=CARDIO[idx%CARDIO.length];
+  h+='<div class="ccard" style="margin-bottom:14px">';
+  h+=`<div style="font-family:var(--ffc);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:4px">Coach — Cardio opcional</div>`;
+  h+=`<div class="ctype" style="font-size:15px">${cs.type}</div>`;
+  h+=`<div style="font-size:12px;color:var(--fg2);margin-top:3px">${cs.dur} · ${cs.int}</div>`;
+  h+=`<div style="font-size:11px;color:var(--fg3);margin-top:6px;line-height:1.5;font-style:italic">${cs.tip}</div>`;
+  h+='</div>';
+
+  // Week dots
+  h+='<div><div class="slabel" style="margin-bottom:9px">Tu semana</div><div class="weekdots">';
+  for(let i=0;i<7;i++){
+    const d=(today-6+i+7)%7,tr=trainedDays.has(d),it=d===today;
+    h+=`<div class="wdot"><div class="wdot-lbl" style="color:${it?'var(--acc)':'var(--fg3)'}">${SD[d]}</div>`;
+    h+=`<div class="wdot-circle" style="background:${tr?'var(--acc)':'var(--bg3)'};border-color:${it?'var(--acc)':'var(--bdr)'}">`;
+    h+=tr?'<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#0d0d0d" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>':'';
+    h+='</div></div>';
   }
+  h+='</div></div></div>';
 
-  h+=`<div style="margin-top:14px">
-    <div class="slabel" style="margin-bottom:9px">Tu semana</div>
-    <div class="weekdots">${[...Array(7)].map((_,i)=>{
-      const d=(today-6+i+7)%7,tr=trainedDays.has(d),it=d===today;
-      return`<div class="wdot">
-        <div class="wdot-lbl" style="color:${it?'var(--acc)':'var(--fg3)'}">${SD[d]}</div>
-        <div class="wdot-circle" style="background:${tr?'var(--acc)':'var(--bg3)'};border-color:${it?'var(--acc)':'var(--bdr)'}">
-          ${tr?'<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#0d0d0d" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>':''}
-        </div>
-      </div>`;
-    }).join('')}</div>
-  </div></div>`;
   el.innerHTML=h;
+
+  // AI coach async
+  if(store.apiKey){
+    const recent=store.sessions.slice(0,4).map(s=>(s.pplPhase||'?')+': '+s.exercises.slice(0,2).map(e=>e.name+' '+e.sets.map(st=>st.w+'x'+st.r).join('/')).join(', ')).join(' | ');
+    const ctx=`Sesión hoy: ${program.label} (${program.sub}). Historial: ${recent||'sin historial aún'}. Da una recomendación específica para esta sesión.`;
+    getCoachAdvice(ctx).then(msg=>{
+      if(!msg)return;
+      const cm=document.getElementById('coach-msg');
+      if(cm){cm.textContent='💡 '+msg;cm.style.display='block';}
+    });
+  }
 }
 
-// TIMER
-function fmtT(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
-function updTD(){
-  document.getElementById('tdisp').textContent=fmtT(tRem);
-  const pct=tTotal>0?tRem/tTotal:1;
-  const rf=document.getElementById('rfill');
-  rf.style.strokeDashoffset=CIRC*(1-pct);
-  rf.style.stroke=tRem<=10?'#ff4444':tRem<=30?'#ffa000':'#e8ff00';
-}
-function setTimer(s){clearInterval(tIv);tOn=false;tTotal=s;tRem=s;document.getElementById('ttbtn').textContent='Iniciar';document.getElementById('tlabel').textContent='Descanso entre series';updTD();}
-function setCustomTimer(){const m=parseInt(document.getElementById('cmin').value)||0,s=parseInt(document.getElementById('csec').value)||0;setTimer(m*60+s);}
-function toggleTimer(){
-  if(tOn){clearInterval(tIv);tOn=false;tRem=Math.max(0,Math.round((tEnd-Date.now())/1000));document.getElementById('ttbtn').textContent='Continuar';document.getElementById('tlabel').textContent='Pausado';}
-  else startTimer();
-}
-function startTimer(){
-  if(tRem<=0)tRem=tTotal;
-  tOn=true;tEnd=Date.now()+tRem*1000;
-  document.getElementById('ttbtn').textContent='Pausar';
-  document.getElementById('tlabel').textContent='Descansando...';
-  clearInterval(tIv);
-  tIv=setInterval(()=>{
-    tRem=Math.max(0,Math.round((tEnd-Date.now())/1000));updTD();
-    if(tRem<=0){
-      clearInterval(tIv);tOn=false;
-      document.getElementById('ttbtn').textContent='Iniciar';
-      document.getElementById('tlabel').textContent='¡Listo — vuelve al ejercicio!';
-      try{navigator.vibrate([400,100,400,100,600]);}catch(e){}
-      if(curScr==='timer')showScreen('train');
-    }
-  },500);
-}
-function resetTimer(){clearInterval(tIv);tOn=false;tRem=tTotal;document.getElementById('ttbtn').textContent='Iniciar';document.getElementById('tlabel').textContent='Descanso entre series';updTD();}
 
-// STATS
 function renderStats(){
   const week=getWeekSessions(),allM=Object.keys(MUSCLES),cnt={};
   allM.forEach(m=>cnt[m]=0);
@@ -844,7 +948,7 @@ function renderRutinaResult(el,cfg){
   ${cfg.schedule.filter(d=>d.length).map((muscles,di)=>{
     const exList=muscles.flatMap(m=>{
       const g=cfg.goals[m]||'Volumen',p=GP[g]||{s:'3-4',r:'8-12',rest:90};
-      return(BEX[m]||[]).slice(0,2).map(n=>({muscle:m,name:n,goal:g,params:p,sug:sugW(n,g)}));
+      return(BEX[m]||[]).slice(0,4).map(n=>({muscle:m,name:n,goal:g,params:p,sug:sugW(n,g)}));
     });
     const mNames=muscles.map(m=>MUSCLES[m]?.name||m).join(' + ');
     const ms=JSON.stringify(muscles),exs=JSON.stringify(exList.map(e=>e.name));
@@ -855,7 +959,7 @@ function renderRutinaResult(el,cfg){
           <div style="font-family:var(--ffc);font-size:15px;font-weight:700">${mNames}</div>
           <div style="font-size:11px;color:var(--fg3);margin-top:2px">${exList.length} ejercicios</div>
         </div>
-        <button class="btn btna btnsm" onclick="startRoutineDay('${ms.replace(/'/g,"\\'")}','${exs.replace(/'/g,"\\'")}')">Empezar</button>
+        <button class="btn btna btnsm" onclick="pendingRoutine={muscles:${ms},exercises:${exs}};_launchRoutine(${ms},${exs})">Empezar</button>
       </div>
       ${exList.map(e=>`<div class="rexrow">
         <div>
