@@ -108,7 +108,7 @@ input:focus{outline:none;border-color:var(--acc)}
 </head>
 <body>
 <div id="app">
-  <div id="hdr">
+  <div id="hdr" style="padding-top:max(14px,env(safe-area-inset-top))">
     <div class="hdr-row">
       <svg width="150" height="36" viewBox="0 0 150 36" aria-label="GymLog">
         <g transform="translate(16,18)">
@@ -455,9 +455,15 @@ function renderExOpts(){
   });
   document.getElementById('ex-opts').innerHTML=h;
 }
-function toggleEx(el,name,wasSel){
-  if(wasSel){selEx.delete(name);el.classList.remove('sel');}
-  else{selEx.add(name);if(!exSets[name])exSets[name]=[{w:'',r:''}];el.classList.add('sel');}
+function toggleEx(el,name){
+  if(selEx.has(name)){
+    selEx.delete(name);
+    el.classList.remove('sel');
+  } else {
+    selEx.add(name);
+    if(!exSets[name])exSets[name]=[{w:'',r:''}];
+    el.classList.add('sel');
+  }
 }
 function addCEx(mid){
   const inp=document.getElementById('ci-'+mid),name=inp.value.trim();if(!name)return;
