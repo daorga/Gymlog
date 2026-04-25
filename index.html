@@ -318,6 +318,100 @@ const DEFAULT_REST={
   espalda:2, abdomen:1, gluteos:2, cuad:2, isquio:2, pantorrilla:1
 };
 
+
+// Ejercicios con patron de movimiento similar
+const SIMILAR = {
+  // PECHO plano
+  'Press banca plano':       ['Press en máquina','Peck deck máquina'],
+  'Press en máquina':        ['Press banca plano','Peck deck máquina'],
+  'Peck deck máquina':       ['Press en máquina','Aperturas máquina'],
+  'Aperturas máquina':       ['Peck deck máquina','Aperturas mancuerna plano'],
+  'Aperturas mancuerna plano':['Aperturas máquina','Crossover polea baja'],
+  'Crossover polea baja':    ['Aperturas mancuerna plano','Crossover polea alta'],
+  // PECHO inclinado
+  'Press banca inclinado':   ['Aperturas mancuerna inclinado'],
+  'Aperturas mancuerna inclinado':['Press banca inclinado'],
+  // PECHO declinado
+  'Press banca declinado':   ['Fondos en paralelas'],
+  'Fondos en paralelas':     ['Press banca declinado'],
+  // HOMBROS press
+  'Press militar barra':     ['Press mancuernas sentado','Press Arnold','Press máquina hombros'],
+  'Press mancuernas sentado':['Press militar barra','Press Arnold','Press máquina hombros'],
+  'Press Arnold':            ['Press mancuernas sentado','Press militar barra'],
+  'Press máquina hombros':   ['Press militar barra','Press mancuernas sentado'],
+  // HOMBROS lateral
+  'Elevaciones laterales':   ['Elevaciones laterales polea'],
+  'Elevaciones laterales polea':['Elevaciones laterales'],
+  // HOMBROS frontal
+  'Elevaciones frontales':   [],
+  // BICEPS curl barra
+  'Curl barra recta':        ['Curl barra Z','Curl cable barra'],
+  'Curl barra Z':            ['Curl barra recta','Curl cable barra'],
+  'Curl cable barra':        ['Curl barra recta','Curl barra Z'],
+  // BICEPS curl mancuerna
+  'Curl mancuerna alterno':  ['Curl inclinado','Curl concentrado'],
+  'Curl inclinado':          ['Curl mancuerna alterno'],
+  'Curl concentrado':        ['Curl mancuerna alterno'],
+  // BICEPS predicador
+  'Curl predicador':         ['Curl araña','Curl polea baja'],
+  'Curl araña':              ['Curl predicador'],
+  'Curl polea baja':         ['Curl predicador'],
+  // TRICEPS extensión
+  'Extensión polea alta cuerda':['Extensión polea alta barra','Jalón tras nuca'],
+  'Extensión polea alta barra': ['Extensión polea alta cuerda','Jalón tras nuca'],
+  'Jalón tras nuca':         ['Extensión polea alta cuerda','Extensión polea alta barra'],
+  // TRICEPS press
+  'Press francés barra':     ['Press francés mancuerna','Skull crusher'],
+  'Press francés mancuerna': ['Press francés barra','Skull crusher'],
+  'Skull crusher':           ['Press francés barra','Press francés mancuerna'],
+  'Press cerrado barra':     ['Fondos cerrados','Dips máquina'],
+  'Fondos cerrados':         ['Press cerrado barra','Dips máquina'],
+  'Dips máquina':            ['Fondos cerrados','Press cerrado barra'],
+  // ESPALDA jalón
+  'Jalón agarre ancho':      ['Dominadas','Dominadas lastradas'],
+  'Jalón agarre cerrado':    ['Jalón neutro'],
+  'Jalón neutro':            ['Jalón agarre cerrado'],
+  'Dominadas':               ['Jalón agarre ancho','Dominadas lastradas'],
+  'Dominadas lastradas':     ['Dominadas','Jalón agarre ancho'],
+  // ESPALDA remo
+  'Remo con barra':          ['Remo T-bar'],
+  'Remo T-bar':              ['Remo con barra'],
+  'Remo mancuerna':          ['Remo en máquina','Remo cable sentado'],
+  'Remo en máquina':         ['Remo mancuerna','Remo cable sentado'],
+  'Remo cable sentado':      ['Remo en máquina','Remo mancuerna'],
+  // CUAD sentadilla
+  'Sentadilla barra':        ['Hack squat','Sentadilla goblet','Sentadilla frontal','Box squat'],
+  'Hack squat':              ['Sentadilla barra','Sentadilla frontal'],
+  'Sentadilla goblet':       ['Sentadilla barra'],
+  'Sentadilla frontal':      ['Sentadilla barra','Hack squat'],
+  'Box squat':               ['Sentadilla barra'],
+  // CUAD prensa
+  'Prensa de pierna':        ['Leg press unilateral'],
+  'Leg press unilateral':    ['Prensa de pierna'],
+  // ISQUIO curl
+  'Curl femoral tumbado':    ['Curl femoral sentado','Curl femoral de pie'],
+  'Curl femoral sentado':    ['Curl femoral tumbado','Curl femoral de pie'],
+  'Curl femoral de pie':     ['Curl femoral tumbado','Curl femoral sentado'],
+  // ISQUIO peso muerto
+  'Peso muerto piernas rígidas':['Peso muerto rumano'],
+  'Peso muerto rumano':      ['Peso muerto piernas rígidas'],
+  // GLUTEOS hip thrust
+  'Hip thrust barra':        ['Hip thrust mancuerna','Puente de glúteos'],
+  'Hip thrust mancuerna':    ['Hip thrust barra','Puente de glúteos'],
+  'Puente de glúteos':       ['Hip thrust barra','Hip thrust mancuerna'],
+  // PANTORRILLA
+  'Elevación de pie':        ['Donkey calf raise','Elevación unilateral'],
+  'Donkey calf raise':       ['Elevación de pie'],
+  'Elevación unilateral':    ['Elevación de pie'],
+  'Elevación sentado':       ['Seated calf raise máquina'],
+  'Seated calf raise máquina':['Elevación sentado'],
+};
+
+function getSimilarWarning(name) {
+  const similar = SIMILAR[name] || [];
+  const conflicts = similar.filter(s => selEx.has(s));
+  return conflicts.length ? conflicts : null;
+}
 function loadStore(){try{return JSON.parse(localStorage.getItem('gymlog_clean')||'{}')}catch(e){return{}}}
 function saveStore(){try{localStorage.setItem('gymlog_clean',JSON.stringify(store))}catch(e){}}
 let store=loadStore();
@@ -456,10 +550,25 @@ function toggleEx(el,name){
   if(selEx.has(name)){
     selEx.delete(name);
     el.classList.remove('sel');
+    // Remove warning if shown
+    const w=document.getElementById('sim-warn-'+CSS.escape(name));
+    if(w)w.remove();
   } else {
+    const conflicts=getSimilarWarning(name);
     selEx.add(name);
     if(!exSets[name])exSets[name]=[{w:'',r:''}];
     el.classList.add('sel');
+    if(conflicts){
+      // Show inline warning below the pill
+      const existing=document.getElementById('sim-warn-'+CSS.escape(name));
+      if(!existing){
+        const warn=document.createElement('div');
+        warn.id='sim-warn-'+name;
+        warn.style.cssText='font-size:11px;color:#ffa000;background:rgba(255,160,0,.1);border:1px solid rgba(255,160,0,.3);border-radius:6px;padding:5px 9px;margin:4px 3px 6px;display:inline-block;';
+        warn.textContent='⚠️ Patrón similar a: '+conflicts.join(', ');
+        el.insertAdjacentElement('afterend',warn);
+      }
+    }
   }
 }
 function addCEx(mid){
@@ -620,6 +729,7 @@ function startTimer(){
       document.getElementById('ttbtn').textContent='Iniciar';
       document.getElementById('tlbl').textContent='¡Listo — vuelve al ejercicio!';
       try{navigator.vibrate([400,100,400,100,600]);}catch(e){}
+      setTimeout(()=>showTab('train'),800);
     }
   },500);
 }
