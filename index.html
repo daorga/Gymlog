@@ -239,6 +239,7 @@ input:focus{outline:none;border-color:var(--acc)}
       <div class="card">
         <div class="lbl" style="margin-bottom:7px">Actividad — últimos 7 días</div>
         <div class="barw" id="week-bar"></div>
+        <div id="day-muscles" style="margin-top:10px;min-height:24px"></div>
       </div>
       <div class="card">
         <div class="lbl" style="margin-bottom:10px">Músculos entrenados</div>
@@ -330,92 +331,83 @@ const DEFAULT_REST={
 };
 
 
-// Ejercicios con patron de movimiento similar
+// Ejercicios con patron de movimiento IDENTICO (misma mecánica, mismo ángulo)
+// Regla: press ≠ apertura (compuesto vs aislamiento = patrones distintos)
+// Regla: jalón ancho ≠ cerrado (reclutamiento dorsal diferente)
 const SIMILAR = {
-  // PECHO plano
-  'Press banca plano':       ['Press en máquina','Peck deck máquina'],
-  'Press en máquina':        ['Press banca plano','Peck deck máquina'],
-  'Peck deck máquina':       ['Press en máquina','Aperturas máquina'],
-  'Aperturas máquina':       ['Peck deck máquina','Aperturas mancuerna plano'],
-  'Aperturas mancuerna plano':['Aperturas máquina','Crossover polea baja'],
-  'Crossover polea baja':    ['Aperturas mancuerna plano','Crossover polea alta'],
-  // PECHO inclinado
-  'Press banca inclinado':   ['Aperturas mancuerna inclinado'],
-  'Aperturas mancuerna inclinado':['Press banca inclinado'],
+  // PECHO — solo press vs press mismo ángulo
+  'Press banca plano':          ['Press en máquina'],
+  'Press en máquina':           ['Press banca plano'],
+  // Aperturas entre sí (mismo patrón de aducción)
+  'Aperturas mancuerna plano':  ['Aperturas máquina','Crossover polea baja'],
+  'Aperturas máquina':          ['Aperturas mancuerna plano','Peck deck máquina'],
+  'Peck deck máquina':          ['Aperturas máquina'],
+  'Crossover polea baja':       ['Aperturas mancuerna plano'],
+  'Crossover polea alta':       ['Aperturas mancuerna inclinado'],
+  'Aperturas mancuerna inclinado':['Crossover polea alta'],
   // PECHO declinado
-  'Press banca declinado':   ['Fondos en paralelas'],
-  'Fondos en paralelas':     ['Press banca declinado'],
-  // HOMBROS press
-  'Press militar barra':     ['Press mancuernas sentado','Press Arnold','Press máquina hombros'],
-  'Press mancuernas sentado':['Press militar barra','Press Arnold','Press máquina hombros'],
-  'Press Arnold':            ['Press mancuernas sentado','Press militar barra'],
-  'Press máquina hombros':   ['Press militar barra','Press mancuernas sentado'],
-  // HOMBROS lateral
-  'Elevaciones laterales':   ['Elevaciones laterales polea'],
+  'Press banca declinado':      ['Fondos en paralelas'],
+  'Fondos en paralelas':        ['Press banca declinado'],
+  // HOMBROS — press entre sí
+  'Press militar barra':        ['Press mancuernas sentado','Press Arnold','Press máquina hombros'],
+  'Press mancuernas sentado':   ['Press militar barra','Press Arnold','Press máquina hombros'],
+  'Press Arnold':               ['Press mancuernas sentado','Press militar barra','Press máquina hombros'],
+  'Press máquina hombros':      ['Press militar barra','Press mancuernas sentado','Press Arnold'],
+  // Elevaciones laterales entre sí
+  'Elevaciones laterales':      ['Elevaciones laterales polea'],
   'Elevaciones laterales polea':['Elevaciones laterales'],
-  // HOMBROS frontal
-  'Elevaciones frontales':   [],
-  // BICEPS curl barra
-  'Curl barra recta':        ['Curl barra Z','Curl cable barra'],
-  'Curl barra Z':            ['Curl barra recta','Curl cable barra'],
-  'Curl cable barra':        ['Curl barra recta','Curl barra Z'],
-  // BICEPS curl mancuerna
-  'Curl mancuerna alterno':  ['Curl inclinado','Curl concentrado'],
-  'Curl inclinado':          ['Curl mancuerna alterno'],
-  'Curl concentrado':        ['Curl mancuerna alterno'],
-  // BICEPS predicador
-  'Curl predicador':         ['Curl araña','Curl polea baja'],
-  'Curl araña':              ['Curl predicador'],
-  'Curl polea baja':         ['Curl predicador'],
-  // TRICEPS extensión
-  'Extensión polea alta cuerda':['Extensión polea alta barra','Jalón tras nuca'],
-  'Extensión polea alta barra': ['Extensión polea alta cuerda','Jalón tras nuca'],
-  'Jalón tras nuca':         ['Extensión polea alta cuerda','Extensión polea alta barra'],
-  // TRICEPS press
-  'Press francés barra':     ['Press francés mancuerna','Skull crusher'],
-  'Press francés mancuerna': ['Press francés barra','Skull crusher'],
-  'Skull crusher':           ['Press francés barra','Press francés mancuerna'],
-  'Press cerrado barra':     ['Fondos cerrados','Dips máquina'],
-  'Fondos cerrados':         ['Press cerrado barra','Dips máquina'],
-  'Dips máquina':            ['Fondos cerrados','Press cerrado barra'],
-  // ESPALDA jalón
-  'Jalón agarre ancho':      ['Dominadas','Dominadas lastradas'],
-  'Jalón agarre cerrado':    ['Jalón neutro'],
-  'Jalón neutro':            ['Jalón agarre cerrado'],
-  'Dominadas':               ['Jalón agarre ancho','Dominadas lastradas'],
-  'Dominadas lastradas':     ['Dominadas','Jalón agarre ancho'],
-  // ESPALDA remo
-  'Remo con barra':          ['Remo T-bar'],
-  'Remo T-bar':              ['Remo con barra'],
-  'Remo mancuerna':          ['Remo en máquina','Remo cable sentado'],
-  'Remo en máquina':         ['Remo mancuerna','Remo cable sentado'],
-  'Remo cable sentado':      ['Remo en máquina','Remo mancuerna'],
-  // CUAD sentadilla
-  'Sentadilla barra':        ['Hack squat','Sentadilla goblet','Sentadilla frontal','Box squat'],
-  'Hack squat':              ['Sentadilla barra','Sentadilla frontal'],
-  'Sentadilla goblet':       ['Sentadilla barra'],
-  'Sentadilla frontal':      ['Sentadilla barra','Hack squat'],
-  'Box squat':               ['Sentadilla barra'],
-  // CUAD prensa
-  'Prensa de pierna':        ['Leg press unilateral'],
-  'Leg press unilateral':    ['Prensa de pierna'],
-  // ISQUIO curl
-  'Curl femoral tumbado':    ['Curl femoral sentado','Curl femoral de pie'],
-  'Curl femoral sentado':    ['Curl femoral tumbado','Curl femoral de pie'],
-  'Curl femoral de pie':     ['Curl femoral tumbado','Curl femoral sentado'],
-  // ISQUIO peso muerto
+  // BÍCEPS — curl barra entre sí
+  'Curl barra recta':           ['Curl barra Z','Curl cable barra'],
+  'Curl barra Z':               ['Curl barra recta','Curl cable barra'],
+  'Curl cable barra':           ['Curl barra recta','Curl barra Z'],
+  // Curl predicador/araña (mismo banco, mismo ángulo)
+  'Curl predicador':            ['Curl araña'],
+  'Curl araña':                 ['Curl predicador'],
+  // TRÍCEPS — extensiones en polea entre sí
+  'Extensión polea alta cuerda':['Extensión polea alta barra'],
+  'Extensión polea alta barra': ['Extensión polea alta cuerda'],
+  // Press francés entre sí
+  'Press francés barra':        ['Press francés mancuerna','Skull crusher'],
+  'Press francés mancuerna':    ['Press francés barra','Skull crusher'],
+  'Skull crusher':              ['Press francés barra','Press francés mancuerna'],
+  // Fondos/dips
+  'Fondos cerrados':            ['Dips máquina'],
+  'Dips máquina':               ['Fondos cerrados'],
+  // ESPALDA — dominadas vs jalón ancho (mismo patrón vertical)
+  'Dominadas':                  ['Dominadas lastradas','Jalón agarre ancho'],
+  'Dominadas lastradas':        ['Dominadas','Jalón agarre ancho'],
+  'Jalón agarre ancho':         ['Dominadas','Dominadas lastradas'],
+  // Remo bilateral con barra
+  'Remo con barra':             ['Remo T-bar'],
+  'Remo T-bar':                 ['Remo con barra'],
+  // Remo en máquina vs cable (mismo ángulo sentado)
+  'Remo en máquina':            ['Remo cable sentado'],
+  'Remo cable sentado':         ['Remo en máquina'],
+  // CUÁDRICEPS — sentadillas bilaterales entre sí
+  'Sentadilla barra':           ['Hack squat','Sentadilla frontal','Box squat'],
+  'Hack squat':                 ['Sentadilla barra','Sentadilla frontal'],
+  'Sentadilla frontal':         ['Sentadilla barra','Hack squat'],
+  'Box squat':                  ['Sentadilla barra'],
+  // Prensa bilateral
+  'Prensa de pierna':           ['Leg press unilateral'],
+  'Leg press unilateral':       ['Prensa de pierna'],
+  // ISQUIO — curl femoral entre sí
+  'Curl femoral tumbado':       ['Curl femoral sentado','Curl femoral de pie'],
+  'Curl femoral sentado':       ['Curl femoral tumbado','Curl femoral de pie'],
+  'Curl femoral de pie':        ['Curl femoral tumbado','Curl femoral sentado'],
+  // Peso muerto isquio
   'Peso muerto piernas rígidas':['Peso muerto rumano'],
-  'Peso muerto rumano':      ['Peso muerto piernas rígidas'],
-  // GLUTEOS hip thrust
-  'Hip thrust barra':        ['Hip thrust mancuerna','Puente de glúteos'],
-  'Hip thrust mancuerna':    ['Hip thrust barra','Puente de glúteos'],
-  'Puente de glúteos':       ['Hip thrust barra','Hip thrust mancuerna'],
+  'Peso muerto rumano':         ['Peso muerto piernas rígidas'],
+  // GLÚTEOS — hip thrust entre sí
+  'Hip thrust barra':           ['Hip thrust mancuerna','Puente de glúteos'],
+  'Hip thrust mancuerna':       ['Hip thrust barra','Puente de glúteos'],
+  'Puente de glúteos':          ['Hip thrust barra','Hip thrust mancuerna'],
   // PANTORRILLA
-  'Elevación de pie':        ['Donkey calf raise','Elevación unilateral'],
-  'Donkey calf raise':       ['Elevación de pie'],
-  'Elevación unilateral':    ['Elevación de pie'],
-  'Elevación sentado':       ['Seated calf raise máquina'],
-  'Seated calf raise máquina':['Elevación sentado'],
+  'Elevación de pie':           ['Donkey calf raise','Elevación unilateral'],
+  'Donkey calf raise':          ['Elevación de pie'],
+  'Elevación unilateral':       ['Elevación de pie'],
+  'Elevación sentado':          ['Seated calf raise máquina'],
+  'Seated calf raise máquina':  ['Elevación sentado'],
 };
 
 function getSimilarWarning(name) {
@@ -434,6 +426,86 @@ if(!store.customEx)store.customEx={};
 let selM=new Set(),selEx=new Set(),exSets={},doneEx=new Set(),doneSets={};
 let tTotal=90,tRem=90,tOn=false,tIv=null,tEnd=0;
 const CIRC=452.4;
+
+
+// ── PROGRESSIVE OVERLOAD ENGINE ──────────────────────────────────────────────
+
+// Compound vs isolation classification
+const COMPOUND_EX = new Set([
+  'Press banca plano','Press banca inclinado','Press banca declinado',
+  'Press militar barra','Press mancuernas sentado','Press Arnold','Press máquina hombros',
+  'Fondos en paralelas','Fondos cerrados',
+  'Jalón agarre ancho','Jalón agarre cerrado','Jalón neutro','Dominadas','Dominadas lastradas',
+  'Remo con barra','Remo mancuerna','Remo en máquina','Remo cable sentado','Remo polea baja','Remo T-bar',
+  'Peso muerto','Peso muerto sumo','Peso muerto rumano','Peso muerto piernas rígidas',
+  'Sentadilla barra','Sentadilla búlgara','Sentadilla frontal','Sentadilla goblet','Box squat',
+  'Hack squat','Prensa de pierna','Leg press unilateral',
+  'Hip thrust barra','Hip thrust mancuerna',
+  'Zancadas','Step-up mancuernas','Buenos días',
+]);
+
+function isCompound(exName) {
+  return COMPOUND_EX.has(exName);
+}
+
+// Get last session sets for an exercise
+function getLastSets(exName) {
+  for (const s of store.sessions) {
+    const ex = (s.exercises || []).find(e => e.name === exName);
+    if (ex && ex.sets && ex.sets.length) {
+      const valid = ex.sets.filter(st => parseFloat(st.w) > 0);
+      if (valid.length) return valid;
+    }
+  }
+  return null;
+}
+
+// Check if progression is due: last S3 reached 8+ reps
+function shouldProgress(exName) {
+  const sets = getLastSets(exName);
+  if (!sets || sets.length < 3) return false;
+  const s3 = sets[sets.length - 1]; // last set = heaviest
+  return parseInt(s3.r) >= 8;
+}
+
+// Calculate pyramid sets based on last session
+// S1: 12 reps at ~75% of working weight
+// S2: 8-10 reps at ~87% of working weight
+// S3: 6-8 reps at 100% working weight (to failure)
+function calcPyramidSets(exName) {
+  const lastSets = getLastSets(exName);
+  const increment = isCompound(exName) ? 5 : 2.5;
+
+  if (!lastSets) {
+    // No history — return empty with reps guidance
+    return [
+      { w: '', r: '12', note: 'empieza ligero', isNew: true },
+      { w: '', r: '10', note: 'sube peso', isNew: true },
+      { w: '', r: '8',  note: 'al fallo', isNew: true },
+    ];
+  }
+
+  // Get the working weight (heaviest set from last session)
+  const lastMaxW = Math.max(...lastSets.map(s => parseFloat(s.w) || 0));
+  const lastS3Reps = parseInt(lastSets[lastSets.length - 1].r) || 0;
+  const progressed = lastS3Reps >= 8;
+
+  // New working weight
+  const workingW = progressed
+    ? Math.round((lastMaxW + increment) / 2.5) * 2.5
+    : lastMaxW;
+
+  // Pyramid percentages
+  const s1w = Math.round((workingW * 0.75) / 2.5) * 2.5;
+  const s2w = Math.round((workingW * 0.875) / 2.5) * 2.5;
+  const s3w = workingW;
+
+  return [
+    { w: String(s1w), r: '12', note: progressed ? '↑ subiste' : '', fl: true },
+    { w: String(s2w), r: '10', note: '', fl: true },
+    { w: String(s3w), r: '8',  note: 'al fallo 💪', fl: true },
+  ];
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('hdrdate').textContent=new Date().toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
@@ -535,10 +607,10 @@ function goStep2(){
 }
 function goStep3(){
   if(!selEx.size){alert('Selecciona al menos un ejercicio');return;}
-  // Pre-load last session data
+  // Pre-load pyramid sets based on last session + progressive overload
   selEx.forEach(ex=>{
     if(!exSets[ex]||exSets[ex].every(s=>!s.w&&!s.r)){
-      exSets[ex]=[{w:'',r:''}];
+      exSets[ex]=calcPyramidSets(ex);
     }
   });
   doneSets={};
@@ -572,9 +644,15 @@ function toggleEx(el,name){
   if(selEx.has(name)){
     selEx.delete(name);
     el.classList.remove('sel');
-    // Remove warning if shown
+    // Remove this exercise's warning
     const w=document.getElementById('sim-warn-'+CSS.escape(name));
     if(w)w.remove();
+    // Also remove warnings on OTHER exercises that pointed to this one
+    document.querySelectorAll('[id^="sim-warn-"]').forEach(warn=>{
+      if(warn.textContent.includes(name)) warn.remove();
+    });
+    // Re-check remaining selected exercises for warnings that may now be stale
+    renderExOpts();
   } else {
     const conflicts=getSimilarWarning(name);
     selEx.add(name);
@@ -638,8 +716,11 @@ function renderLog(){
     return`<div class="excard">
       <div class="exhdr">
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:500">${ex}</div>
-          ${lastD?`<div style="font-size:10px;color:var(--fg3);margin-top:3px;line-height:1.6">${lastD.map((s,i)=>'S'+(i+1)+': '+(s.w||'—')+'lb×'+(s.r||'—')).join(' · ')}</div>`:''}
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:14px;font-weight:500">${ex}</span>
+            ${shouldProgress(ex)?'<span style="font-size:10px;background:rgba(232,255,0,.15);color:var(--acc);border:1px solid rgba(232,255,0,.3);border-radius:20px;padding:2px 7px;font-weight:500">↑ progresión</span>':''}
+          </div>
+          ${lastD?`<div style="font-size:10px;color:var(--fg3);margin-top:3px;line-height:1.6">Última: ${lastD.map((s,i)=>'S'+(i+1)+': '+(s.w||'—')+'lb×'+(s.r||'—')).join(' · ')}</div>`:'<div style="font-size:10px;color:var(--fg3);margin-top:2px">Primera vez — empieza ligero</div>'}
         </div>
         <div style="display:flex;gap:5px;align-items:center">
           <button class="btn-ghost" onclick="showTab('timer');if(!tOn)startTimer()" style="font-size:12px">⏱</button>
@@ -656,7 +737,12 @@ function renderLog(){
         ${sets.map((s,si)=>{
           const id=ds.has(si);
           return`<div class="setrow${id?' done-row':''}">
-            <span style="min-width:20px;font-size:12px;font-family:var(--fm);color:${id?'var(--green)':'var(--fg3)'}">${id?'✓':si+1}</span>
+            <div style="min-width:20px">
+              <span style="font-size:12px;font-family:var(--fm);color:${id?'var(--green)':'var(--fg3)'}">${id?'✓':si+1}</span>
+            </div>
+            <div style="min-width:60px;font-size:10px;color:${s.note?'var(--acc)':'var(--fg3)'}">
+              ${s.note||('×'+s.r+' reps')}
+            </div>
             <div style="flex:1"><input type="number" placeholder="—" value="${id?s.w:s.w}" min="0" step=".5"
               style="${id?'pointer-events:none;background:var(--green-bg);color:var(--green);border-color:var(--green-bd);':''}"
               oninput="upd('${ee}',${si},'w',this.value)"></div>
@@ -785,13 +871,18 @@ function renderSemana(){
   const ord=[...Array(7)].map((_,i)=>(tod-6+i+7)%7);
   document.getElementById('week-bar').innerHTML=ord.map(d=>{
     const muscles=musclesByDay[d]?[...musclesByDay[d]].map(m=>MUSCLES[m]?.name||m):[];
-    const mLabel=muscles.length?`<div style="font-size:9px;color:var(--acc);text-align:center;margin-top:3px;line-height:1.3;max-width:44px">${muscles.join('<br>')}</div>`:'';
-    return`<div class="barc">
+    const tooltip=muscles.length?`title="${muscles.join(', ')}"`:'' ;
+    return`<div class="barc" ${tooltip} style="cursor:${muscles.length?'pointer':'default'}" onclick="${muscles.length?`showDayMuscles(${d})`:''}">
       <div class="barf" style="height:${Math.round(dc[d]/maxC*52)}px;opacity:${dc[d]?1:.12}"></div>
-      <div class="barl">${days[d]}</div>
-      ${mLabel}
+      <div class="barl" style="color:${dc[d]?'var(--acc)':'var(--fg3)'}">${days[d]}</div>
     </div>`;
   }).join('');
+  // Show muscle chips below chart, for the most recent trained day
+  const lastTrainedDay=ord.slice().reverse().find(d=>dc[d]>0);
+  const dayMuscles=lastTrainedDay!==undefined&&musclesByDay[lastTrainedDay]?[...musclesByDay[lastTrainedDay]].map(m=>MUSCLES[m]?.name||m):[];
+  document.getElementById('day-muscles').innerHTML=dayMuscles.length
+    ?`<div style="font-size:11px;color:var(--fg3);margin-bottom:6px">Última sesión</div>`+dayMuscles.map(m=>`<span class="chip chip-g">${m}</span>`).join('')
+    :'';
 
   const L=getLastDays();
   document.getElementById('muscle-freq').innerHTML=trained.length
@@ -883,6 +974,22 @@ function saveRestConfig(){
 }
 
 function exportData(){const b=new Blob([JSON.stringify(store,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='gymlog-data.json';a.click();}
+
+// ── DAY MUSCLES ──────────────────────────────────────────────────────────────
+function showDayMuscles(day){
+  const week=getWeekSessions();
+  const musclesByDay={};
+  week.forEach(s=>{
+    const d=new Date(s.date).getDay();
+    if(!musclesByDay[d])musclesByDay[d]=new Set();
+    (s.muscles||[]).forEach(m=>musclesByDay[d].add(m));
+  });
+  const muscles=musclesByDay[day]?[...musclesByDay[day]].map(m=>MUSCLES[m]?.name||m):[];
+  const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  document.getElementById('day-muscles').innerHTML=
+    `<div style="font-size:11px;color:var(--fg3);margin-bottom:6px">${days[day]}</div>`+
+    muscles.map(m=>`<span class="chip chip-g">${m}</span>`).join('');
+}
 
 // ── PROGRESS CHART ───────────────────────────────────────────────────────────
 function showProgress(exName){
