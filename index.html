@@ -10,8 +10,9 @@
 <title>GymLog</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230d0d0d'/%3E%3Cg transform='translate(50,50)'%3E%3Crect x='-22' y='-4' width='44' height='8' rx='4' fill='%23e8ff00'/%3E%3Crect x='-28' y='-14' width='9' height='28' rx='4' fill='%23e8ff00'/%3E%3Crect x='19' y='-14' width='9' height='28' rx='4' fill='%23e8ff00'/%3E%3Crect x='-34' y='-9' width='6' height='18' rx='3' fill='%23e8ff00'/%3E%3Crect x='28' y='-9' width='6' height='18' rx='3' fill='%23e8ff00'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230d0d0d'/%3E%3Cg transform='translate(50,50)'%3E%3Crect x='-22' y='-4' width='44' height='8' rx='4' fill='%23e8ff00'/%3E%3Crect x='-28' y='-14' width='9' height='28' rx='4' fill='%23e8ff00'/%3E%3Crect x='19' y='-14' width='9' height='28' rx='4' fill='%23e8ff00'/%3E%3Crect x='-34' y='-9' width='6' height='18' rx='3' fill='%23e8ff00'/%3E%3Crect x='28' y='-9' width='6' height='18' rx='3' fill='%23e8ff00'/%3E%3C/g%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* System fonts — work 100% offline, look native on iOS/Android */
+</style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -23,7 +24,7 @@
   --red:#ff4444;--red-bg:rgba(255,68,68,.1);--red-bd:rgba(255,68,68,.3);
   --bdr:rgba(255,255,255,.07);--bdr2:rgba(255,255,255,.13);
   --r:8px;--r2:12px;--r3:16px;
-  --ff:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+  --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;--fm:'SF Mono','Fira Code',Courier,monospace;
   --sb:env(safe-area-inset-bottom,0px);
 }
 html,body{height:100%;background:var(--bg);color:var(--fg);overflow:hidden}
@@ -110,7 +111,7 @@ input:focus{outline:none;border-color:var(--acc)}
 <div id="app">
   <div id="hdr" style="padding-top:max(14px,env(safe-area-inset-top))">
     <div class="hdr-row">
-      <svg width="150" height="36" viewBox="0 0 150 36" aria-label="GymLog">
+      <svg width="190" height="36" viewBox="0 0 190 36" aria-label="GymLog">
         <g transform="translate(16,18)">
           <rect x="0" y="-4" width="30" height="8" rx="4" fill="#e8ff00"/>
           <rect x="-6" y="-12" width="7" height="24" rx="3.5" fill="#e8ff00"/>
@@ -119,7 +120,7 @@ input:focus{outline:none;border-color:var(--acc)}
           <rect x="36" y="-8" width="6" height="16" rx="3" fill="#e8ff00"/>
         </g>
         <text x="60" y="12" font-family="'DM Sans',sans-serif" font-size="16" font-weight="500" fill="#f0f0f0" letter-spacing="-.3">gymlog</text>
-        <line x1="60" y1="19" x2="148" y2="19" stroke="#e8ff00" stroke-width="1" stroke-linecap="round"/>
+        <line x1="60" y1="19" x2="188" y2="19" stroke="#e8ff00" stroke-width="1" stroke-linecap="round"/>
         <text x="60" y="30" font-family="'DM Sans',sans-serif" font-size="7.5" font-weight="400" fill="#555" letter-spacing="1.5">TRACK · REST · GROW</text>
       </svg>
       <span style="font-size:12px;color:var(--fg3)" id="hdrdate"></span>
@@ -269,6 +270,16 @@ input:focus{outline:none;border-color:var(--acc)}
       </div>
     </div>
 
+  </div>
+</div>
+
+<div id="prog-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;align-items:flex-end;justify-content:center;padding:0">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;border:1px solid var(--bdr2);padding:20px 18px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div id="prog-title" style="font-size:16px;font-weight:500"></div>
+      <button onclick="closeProg()" style="border:none;background:transparent;color:var(--fg3);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="prog-content"></div>
   </div>
 </div>
 
@@ -436,13 +447,24 @@ function dLeft(id){const L=getLastDays();return Math.max(0,getMuscleRest(id)-(L[
 function rdyDate(id){const d=new Date();d.setDate(d.getDate()+dLeft(id));return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric'});}
 function getWeekSessions(){const wa=new Date(Date.now()-7*864e5);return store.sessions.filter(s=>new Date(s.date)>=wa);}
 
-// Get max weight ever for an exercise
+// Get last session detail for an exercise (sets with weight+reps)
+function getLastSessionDetail(exName){
+  for(const s of store.sessions){
+    const ex=s.exercises&&s.exercises.find(e=>e.name===exName);
+    if(ex&&ex.sets&&ex.sets.length){
+      const valid=ex.sets.filter(st=>st.w||st.r);
+      if(valid.length)return valid;
+    }
+  }
+  return null;
+}
+// Get max weight ever for an exercise (still used for progress chart)
 function getMaxWeight(exName){
   let max=null;
   for(const s of store.sessions){
     const ex=s.exercises&&s.exercises.find(e=>e.name===exName);
     if(ex){
-      ex.sets.forEach(st=>{
+      (ex.sets||[]).forEach(st=>{
         const w=parseFloat(st.w);
         if(w>0&&(max===null||w>max))max=w;
       });
@@ -533,8 +555,8 @@ function renderExOpts(){
       <div class="lbl" style="margin-bottom:8px">${MUSCLES[mid].name}</div>
       <div>${all.map(ex=>{
         const isSel=selEx.has(ex),isC=custom.includes(ex);
-        const maxW=getMaxWeight(ex);
-        const hint=maxW?`<span class="pw-hint">${maxW}${'lb'} max</span>`:'';
+        const lastDetail=getLastSessionDetail(ex);
+        const hint=lastDetail?`<span style="display:block;font-size:10px;color:var(--fg3);margin:2px 3px 4px;line-height:1.5">${lastDetail.map((s,i)=>'S'+(i+1)+': '+(s.w||'—')+'lb×'+(s.r||'—')).join(' · ')}</span>`:'';
         const del=isC?` <button onclick="delCEx('${mid}','${ex.replace(/'/g,"\'")}',event)" style="font-size:10px;padding:0 3px;border:none;background:transparent;color:var(--red);cursor:pointer">✕</button>`:'';
         return`<span class="pill${isSel?' sel':''}${isC?' cust':''}" onclick="toggleEx(this,'${ex.replace(/'/g,"\'")}',${isSel})">${ex}${hint}${del}</span>`;
       }).join('')}</div>
@@ -593,7 +615,7 @@ function renderLog(){
     const sets=exSets[ex]||[{w:'',r:''}];
     const ee=ex.replace(/'/g,"\'");
     const ds=doneSets[ex]||new Set();
-    const maxW=getMaxWeight(ex);
+    const lastD=getLastSessionDetail(ex);
 
     if(doneEx.has(ex)){
       const f=sets.filter(s=>s.w||s.r).length||sets.length;
@@ -615,9 +637,9 @@ function renderLog(){
 
     return`<div class="excard">
       <div class="exhdr">
-        <div>
+        <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:500">${ex}</div>
-          ${maxW?`<div style="font-size:11px;color:var(--acc);margin-top:2px;font-family:var(--fm)">Máx previo: ${maxW}${'lb'}</div>`:''}
+          ${lastD?`<div style="font-size:10px;color:var(--fg3);margin-top:3px;line-height:1.6">${lastD.map((s,i)=>'S'+(i+1)+': '+(s.w||'—')+'lb×'+(s.r||'—')).join(' · ')}</div>`:''}
         </div>
         <div style="display:flex;gap:5px;align-items:center">
           <button class="btn-ghost" onclick="showTab('timer');if(!tOn)startTimer()" style="font-size:12px">⏱</button>
@@ -729,7 +751,7 @@ function startTimer(){
       document.getElementById('ttbtn').textContent='Iniciar';
       document.getElementById('tlbl').textContent='¡Listo — vuelve al ejercicio!';
       try{navigator.vibrate([400,100,400,100,600]);}catch(e){}
-      setTimeout(()=>showTab('train'),800);
+      setTimeout(()=>showTab('train'),1200);
     }
   },500);
 }
@@ -743,18 +765,33 @@ function renderSemana(){
   week.forEach(s=>s.muscles&&s.muscles.forEach(m=>{if(cnt[m]!==undefined)cnt[m]++;}));
   const trained=allM.filter(m=>cnt[m]>0),missing=allM.filter(m=>cnt[m]===0);
   const tS=week.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).length,0),0);
-  const tV=week.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).reduce((c,st)=>c+(parseFloat(st.w)||0)*(parseFloat(st.r)||0),0),0),0);
+  const tEx=week.reduce((a,s)=>a+(s.exercises||[]).length,0);
   document.getElementById('stat-grid').innerHTML=`
     <div class="scell"><div class="snum">${week.length}</div><div class="slbl">sesiones</div></div>
     <div class="scell"><div class="snum">${tS}</div><div class="slbl">series</div></div>
-    <div class="scell"><div class="snum">${tV>=1000?Math.round(tV/100)/10+'k':Math.round(tV)}</div><div class="slbl">${'lb'} vol</div></div>`;
+    <div class="scell"><div class="snum">${tEx}</div><div class="slbl">ejercicios</div></div>`;
 
   const days=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
   const dc=Array(7).fill(0);const tod=new Date().getDay();
   week.forEach(s=>dc[new Date(s.date).getDay()]++);
   const maxC=Math.max(...dc,1);
+  // Build muscle map per day
+  const musclesByDay={};
+  week.forEach(s=>{
+    const d=new Date(s.date).getDay();
+    if(!musclesByDay[d])musclesByDay[d]=new Set();
+    (s.muscles||[]).forEach(m=>musclesByDay[d].add(m));
+  });
   const ord=[...Array(7)].map((_,i)=>(tod-6+i+7)%7);
-  document.getElementById('week-bar').innerHTML=ord.map(d=>`<div class="barc"><div class="barf" style="height:${Math.round(dc[d]/maxC*52)}px;opacity:${dc[d]?1:.12}"></div><div class="barl">${days[d]}</div></div>`).join('');
+  document.getElementById('week-bar').innerHTML=ord.map(d=>{
+    const muscles=musclesByDay[d]?[...musclesByDay[d]].map(m=>MUSCLES[m]?.name||m):[];
+    const mLabel=muscles.length?`<div style="font-size:9px;color:var(--acc);text-align:center;margin-top:3px;line-height:1.3;max-width:44px">${muscles.join('<br>')}</div>`:'';
+    return`<div class="barc">
+      <div class="barf" style="height:${Math.round(dc[d]/maxC*52)}px;opacity:${dc[d]?1:.12}"></div>
+      <div class="barl">${days[d]}</div>
+      ${mLabel}
+    </div>`;
+  }).join('');
 
   const L=getLastDays();
   document.getElementById('muscle-freq').innerHTML=trained.length
@@ -788,8 +825,15 @@ function renderHistory(){
     const ds=new Date(s.date).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     const mn=(s.muscles||[]).map(m=>MUSCLES[m]?.name||m).join(', ');
     const exRows=(s.exercises||[]).map(ex=>{
-      const ch=(ex.sets||[]).map((st,i)=>`<span style="font-size:11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:2px 7px;margin:2px;display:inline-block;color:var(--fg2);font-family:var(--fm)">s${i+1} ${st.w||'—'}${'lb'}×${st.r||'—'}</span>`).join('');
-      return`<div style="margin-bottom:7px"><div style="font-size:13px;font-weight:500;margin-bottom:4px">${ex.name}</div><div>${ch}</div></div>`;
+      const ch=(ex.sets||[]).map((st,i)=>`<span style="font-size:11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:2px 7px;margin:2px;display:inline-block;color:var(--fg2);font-family:monospace">s${i+1} ${st.w||'—'}lb×${st.r||'—'}</span>`).join('');
+      const exN=ex.name.replace(/'/g,"\\'");
+      return`<div style="margin-bottom:9px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:500">${ex.name}</span>
+          <button onclick="showProgress('${exN}')" style="font-size:11px;padding:3px 9px;border:1px solid var(--bdr2);border-radius:20px;background:transparent;color:var(--acc);cursor:pointer;font-family:var(--ff)">📈 ver</button>
+        </div>
+        <div>${ch}</div>
+      </div>`;
     }).join('');
     return`<div class="sessitem">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
@@ -839,6 +883,65 @@ function saveRestConfig(){
 }
 
 function exportData(){const b=new Blob([JSON.stringify(store,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='gymlog-data.json';a.click();}
+
+// ── PROGRESS CHART ───────────────────────────────────────────────────────────
+function showProgress(exName){
+  // Gather max weight per session for this exercise
+  const data=[];
+  const seen=new Set();
+  store.sessions.slice().reverse().forEach(s=>{
+    const ex=(s.exercises||[]).find(e=>e.name===exName);
+    if(ex){
+      const maxW=Math.max(...(ex.sets||[]).map(st=>parseFloat(st.w)||0));
+      const dateStr=new Date(s.date).toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+      if(maxW>0)data.push({date:dateStr,w:maxW,sets:ex.sets});
+    }
+  });
+
+  document.getElementById('prog-title').textContent=exName;
+  const el=document.getElementById('prog-content');
+
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--fg3);font-size:13px">Sin historial para este ejercicio</div>';
+    document.getElementById('prog-modal').style.display='flex';
+    return;
+  }
+
+  // Draw SVG chart
+  const maxW=Math.max(...data.map(d=>d.w));
+  const minW=Math.min(...data.map(d=>d.w));
+  const W=320,H=120,pad=10;
+  const pts=data.map((d,i)=>{
+    const x=pad+(i/(data.length-1||1))*(W-pad*2);
+    const y=H-pad-(d.w-minW)/(maxW-minW||1)*(H-pad*2);
+    return{x,y,d};
+  });
+  const path=pts.map((p,i)=>i===0?`M${p.x},${p.y}`:`L${p.x},${p.y}`).join(' ');
+  const area=`M${pts[0].x},${H} `+pts.map(p=>`L${p.x},${p.y}`).join(' ')+` L${pts[pts.length-1].x},${H} Z`;
+
+  const chart=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible;margin-bottom:8px">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8ff00" stop-opacity=".3"/><stop offset="100%" stop-color="#e8ff00" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#ag)"/>
+    <path d="${path}" fill="none" stroke="#e8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="#e8ff00"/>`).join('')}
+    ${pts.map(p=>`<text x="${p.x}" y="${p.y-10}" text-anchor="middle" font-size="9" fill="#e8ff00" font-family="monospace">${p.d.w}lb</text>`).join('')}
+    <text x="${pts[0].x}" y="${H+16}" text-anchor="middle" font-size="9" fill="#555" font-family="sans-serif">${pts[0].d.date}</text>
+    ${pts.length>1?`<text x="${pts[pts.length-1].x}" y="${H+16}" text-anchor="middle" font-size="9" fill="#555" font-family="sans-serif">${pts[pts.length-1].d.date}</text>`:''}
+  </svg>`;
+
+  // Session list
+  const list=data.slice().reverse().map((d,i)=>{
+    const sets=(d.sets||[]).map((s,j)=>`<span style="font-size:11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:2px 7px;margin:2px;display:inline-block;color:var(--fg2);font-family:monospace">s${j+1} ${s.w||'—'}lb×${s.r||'—'}</span>`).join('');
+    return`<div style="padding:9px 0;border-bottom:1px solid var(--bdr)">
+      <div style="font-size:11px;color:var(--fg3);margin-bottom:5px">${d.date}</div>
+      <div>${sets}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=chart+`<div style="margin-top:4px">${list}</div>`;
+  document.getElementById('prog-modal').style.display='flex';
+}
+function closeProg(){document.getElementById('prog-modal').style.display='none';}
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
