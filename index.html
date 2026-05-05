@@ -870,19 +870,15 @@ function renderSemana(){
   });
   const ord=[...Array(7)].map((_,i)=>(tod-6+i+7)%7);
   document.getElementById('week-bar').innerHTML=ord.map(d=>{
-    const muscles=musclesByDay[d]?[...musclesByDay[d]].map(m=>MUSCLES[m]?.name||m):[];
-    const tooltip=muscles.length?`title="${muscles.join(', ')}"`:'' ;
-    return`<div class="barc" ${tooltip} style="cursor:${muscles.length?'pointer':'default'}" onclick="${muscles.length?`showDayMuscles(${d})`:''}">
+    return`<div class="barc" style="cursor:${dc[d]?'pointer':'default'}" onclick="${dc[d]?`showDayMuscles(${d})`:``}">
       <div class="barf" style="height:${Math.round(dc[d]/maxC*52)}px;opacity:${dc[d]?1:.12}"></div>
       <div class="barl" style="color:${dc[d]?'var(--acc)':'var(--fg3)'}">${days[d]}</div>
     </div>`;
   }).join('');
-  // Show muscle chips below chart, for the most recent trained day
+  // Show chips for most recent trained day by default
   const lastTrainedDay=ord.slice().reverse().find(d=>dc[d]>0);
-  const dayMuscles=lastTrainedDay!==undefined&&musclesByDay[lastTrainedDay]?[...musclesByDay[lastTrainedDay]].map(m=>MUSCLES[m]?.name||m):[];
-  document.getElementById('day-muscles').innerHTML=dayMuscles.length
-    ?`<div style="font-size:11px;color:var(--fg3);margin-bottom:6px">Última sesión</div>`+dayMuscles.map(m=>`<span class="chip chip-g">${m}</span>`).join('')
-    :'';
+  if(lastTrainedDay!==undefined) showDayMuscles(lastTrainedDay);
+  else document.getElementById('day-muscles').innerHTML='';
 
   const L=getLastDays();
   document.getElementById('muscle-freq').innerHTML=trained.length
